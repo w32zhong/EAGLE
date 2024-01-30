@@ -103,7 +103,7 @@ The inference code we provide automatically allocates model weights (loading a m
 ### With UI
 We have provided a suggested web interface, which you can use by running the following command. After the model is fully loaded, a URL will be output in the terminal, which you can enter into your browser to access.
 ```bash
-python -m application.webui --ea-model-path  yuhuili/EAGLE-llama2-chat-7B --base-model-path NousResearch/Llama-2-7b-chat-hf --model-type llama-2-chat
+python -m application.webui --ea-model-path  yuhuili/EAGLE-llama2-chat-7B --base-model-path NousResearch/Llama-2-7b-chat-hf --model-type llama-2-chat --load-in-8bit
 ```
 ### With Code
 You can use our provided "eagenerate" for speedup generation just like using 'generate' from Hugging Face. Here is an example.
