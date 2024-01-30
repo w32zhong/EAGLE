@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from transformers import PreTrainedModel, PretrainedConfig,AutoConfig
 from .modeling_llama_kv import LlamaForCausalLM as KVLlamaForCausalLM
-from .modeling_Mixtral_kv import MixtralForCausalLM as KVMixtralForCausalLM
+#from .modeling_Mixtral_kv import MixtralForCausalLM as KVMixtralForCausalLM
 from .utils import *
 from .kv_cache import initialize_past_key_values
 from .choices import mc_sim_7b_63
@@ -86,9 +86,10 @@ class EaModel(nn.Module):
                 base_model_path, **kwargs
             )
         else:
-            base_model = KVMixtralForCausalLM.from_pretrained(
-                base_model_path, **kwargs
-            )
+            raise NotImplemented
+            #base_model = KVMixtralForCausalLM.from_pretrained(
+            #    base_model_path, **kwargs
+            #)
 
         configpath=os.path.join(ea_model_path,"config.json")
         if not os.path.exists(configpath):
