@@ -119,7 +119,6 @@ class EaModel(nn.Module):
             init=True,
             logits_processor=None
     ):
-
         with torch.inference_mode():
             # Pass input through the base model
             outputs = self.base_model.model(
@@ -143,8 +142,13 @@ class EaModel(nn.Module):
             input_ids = torch.cat((input_ids, token.to(input_ids.device)), dim=1)
             # Clone the output hidden states
 
-            #breakpoint()
             ea_logits = self.ea_layer.topK_genrate(hidden_states, input_ids, self.base_model.lm_head, logits_processor)
+            #interact
+            #self.tokenizer.decode(input_ids[0])
+            #for i in range(len(ea_logits[0])):
+            #    print(i, [self.tokenizer.decode([t]) for t in ea_logits[0][i]])
+            #breakpoint()
+
             if output_orig:
                 return ea_logits, outputs, orig, hidden_states, token
             return ea_logits, hidden_states, token
@@ -330,6 +334,12 @@ class EaModel(nn.Module):
                 sample_token,
                 logits_processor
             )
+            # breakpoint()
+            # self.tokenizer.decode(sample_token[0])
+            # p self.tokenizer.decode(tree_candidates[0])
+            # p self.tokenizer.batch_decode(candidates)
+
+            # verify-forward!
             logits, hidden_state_new, outputs = tree_decoding(
                 self,
                 tree_candidates,
@@ -338,12 +348,14 @@ class EaModel(nn.Module):
                 input_ids,
                 tree_buffers["retrieve_indices_head"],
             )
+            # p self.tokenizer.batch_decode(logits[:,:-1].argmax(-1))
 
+            # actual-verify!
             best_candidate, accept_length, sample_p = evaluate_posterior(
                 logits, candidates, logits_processor, cart_candidates_prob, tree_logits[2], tree_buffers["p_indices"],
                 tree_candidates, tree_buffers["b_indices"]
             )
-            #print("post", time.time() - s)
+
             input_ids, tree_logits, new_token, hidden_state, sample_token = update_inference_inputs(
                 input_ids,
                 candidates,
@@ -361,6 +373,7 @@ class EaModel(nn.Module):
                 hidden_state_new,
                 sample_p
             )
+            #breakpoint()
 
             yield input_ids
 

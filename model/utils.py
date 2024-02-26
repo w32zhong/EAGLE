@@ -250,11 +250,13 @@ def generate_candidates(tree_logits, tree_indices, retrieve_indices, sample_toke
     candidates = torch.cat([candidates_logit, candidates_tree_logits.view(-1)], dim=-1)
 
     tree_candidates = candidates[tree_indices]
+    # tree_candidates is selected tree_logits, same structure.
 
     tree_candidates_ext = torch.cat(
         [tree_candidates, torch.zeros((1), dtype=torch.long, device=tree_candidates.device)], dim=0)
 
     cart_candidates = tree_candidates_ext[retrieve_indices]
+    #breakpoint()
 
     if logits_processor is not None:
         candidates_tree_prob = tree_logits[1]
@@ -288,7 +290,7 @@ def tree_decoding(
         output_orig=True,
         past_key_values=past_key_values,
         position_ids=position_ids,
-        init=False,
+        init=False, # init=False in the verify stage
     )
 
     logits = tree_logits[0, retrieve_indices]
@@ -389,7 +391,7 @@ def evaluate_posterior(
 def update_inference_inputs(
         input_ids,
         candidates,
-        best_candidate,
+        best_candidate, # best candidate index!
         accept_length,
         retrieve_indices,
         logits_processor,
@@ -426,8 +428,6 @@ def update_inference_inputs(
 
     retrieve_hidden_state_new = hidden_state_new[:, retrieve_indices]
     accept_hidden_state_new = retrieve_hidden_state_new[:, best_candidate, : accept_length + 1]
-    # token=model.base_model.lm_head(accept_hidden_state_new[:,-1]).argmax()
-    # token=token[None,None]
     prob = sample_p
     if logits_processor is not None:
         token = torch.multinomial(prob, 1)
@@ -435,7 +435,8 @@ def update_inference_inputs(
     else:
         token = torch.argmax(prob)
         token = token[None, None]
-    #hidden_state = torch.cat((hidden_state, accept_hidden_state_new), dim=1)
+
+    # after init=True, this gets called recurrently.
     tree_logits = model.ea_layer.topK_genrate(accept_hidden_state_new,
                                               input_ids=torch.cat((input_ids, token.to(input_ids.device)), dim=1),
                                               head=model.base_model.lm_head, logits_processor=logits_processor)

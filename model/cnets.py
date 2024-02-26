@@ -770,7 +770,6 @@ class Model(nn.Module):
         self.reset()
         if use_cache:
 
-
             if hasattr(self, "stable_kv") and self.stable_kv is not None:
                 kv_len=self.stable_kv[0][0].shape[2]
                 out_hidden, past_key_values = self(hidden_states, input_ids=input_ids[:,kv_len:], past_key_values=self.stable_kv,use_cache=True)
@@ -790,6 +789,7 @@ class Model(nn.Module):
 
 
             for i in range(len(self.tree_buffer['tree_indices'])):
+                # [0, 1, 2, 3], [ 0,  1,  2, 10], [0], [0]
                 if logits_processor is not None:
                     topk_index,topk_prob,op=self.sample(last_headout,logits_processor,k=top_k,)
                 else:
@@ -800,17 +800,17 @@ class Model(nn.Module):
                 ss_token.append(topk_index)
                 ss_prob.append(topk_prob)
                 ss_op.append(op)
-                #topk_index = torch.topk(last_headout, top_k, dim=-1).indices
+
                 topk_index = topk_index.view(-1)
                 select_index=topk_index[self.tree_buffer['tree_indices'][i]]
-                #len_sq=select_index.shape[0]
                 input_ids=select_index[None,:]
+                #breakpoint()
+
                 if i==0:
                     hidden_states = out_hidden[:, -1:]
                 else:
                     hidden_states=out_hidden
                 hidden_states=self.repeat_hidden(hidden_states,self.tree_buffer["repeat_nums"][i])
-                #hidden_states = hidden_states.repeat(1,len_sq,1)
                 self.tree_mask=self.tree_buffer['attn_mask'][i]
                 position_ids=len_posi+self.tree_buffer["position_ids"][i]
                 out_hidden, past_key_values = self(hidden_states, input_ids=input_ids, past_key_values=past_key_values,
