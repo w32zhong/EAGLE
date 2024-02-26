@@ -283,6 +283,12 @@ class EaModel(nn.Module):
         self.tree_buffers = tree_buffers
         self.tree_choices = tree_choices
 
+        # dict_keys(['tree_attn_mask', 'tree_indices', 'tree_position_ids', 'retrieve_indices', 'p_indices', 'b_indices', 'retrieve_indices_head'])
+        #import matplotlib.pyplot as plt
+        #plt.imshow(tree_buffers['tree_attn_mask'].cpu()[0][0])
+        #plt.savefig('attn_mask.png')
+        #breakpoint()
+
         # Initialize the past key and value states
         if hasattr(self, "past_key_values"):
             past_key_values = self.past_key_values
