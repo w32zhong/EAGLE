@@ -143,6 +143,7 @@ class EaModel(nn.Module):
             input_ids = torch.cat((input_ids, token.to(input_ids.device)), dim=1)
             # Clone the output hidden states
 
+            #breakpoint()
             ea_logits = self.ea_layer.topK_genrate(hidden_states, input_ids, self.base_model.lm_head, logits_processor)
             if output_orig:
                 return ea_logits, outputs, orig, hidden_states, token
@@ -283,7 +284,15 @@ class EaModel(nn.Module):
         self.tree_buffers = tree_buffers
         self.tree_choices = tree_choices
 
-        # dict_keys(['tree_attn_mask', 'tree_indices', 'tree_position_ids', 'retrieve_indices', 'p_indices', 'b_indices', 'retrieve_indices_head'])
+        [
+            'tree_attn_mask',
+            'tree_indices', # node idx -> node id @ 10-degree binary tree
+            'tree_position_ids', # node idx -> node depth
+            'retrieve_indices', # tree_indices[retrieve_indices] = leaf-root paths
+            'p_indices',
+            'b_indices',
+            'retrieve_indices_head'
+        ]
         #import matplotlib.pyplot as plt
         #plt.imshow(tree_buffers['tree_attn_mask'].cpu()[0][0])
         #plt.savefig('attn_mask.png')

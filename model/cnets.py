@@ -498,6 +498,7 @@ class Model(nn.Module):
     def init_tree(self):
         self.tree = mc_sim_7b_63
         self.tree_buffer=generate_tree_buffers(self.tree,self.embed_tokens.weight.device)
+        #breakpoint()
 
 
     def reset(self):
@@ -827,6 +828,8 @@ class Model(nn.Module):
                 #last_headout = head(out_hidden[0])
                 #sslogits.append(last_headout)
                 #print(select_index)
+
+            #breakpoint()
 
             if logits_processor is not None:
                 topk_index,topk_prob,op=self.sample(last_headout,logits_processor,k=top_k,)

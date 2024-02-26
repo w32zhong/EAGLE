@@ -97,33 +97,31 @@ class Tree:
 def generate_tree_buffers(tree_choices, device="cuda"):
     tree=Tree(tree_choices)
     sorted_tree_choices = sorted(tree_choices, key=lambda x: (len(x), x))
-    tree_len = tree.num_node_wchild()
+    tree_len = tree.num_node_wchild() # 10
 
-
-    max_depth=tree.max_depth()
+    max_depth=tree.max_depth() # 5
     nodes_wc=tree.get_node_wchild()
 
     depth_counts=[0 for _ in range(max_depth-1)]
     for x in nodes_wc:
         depth_counts[x.depth-1]+=1
     depth_counts_sum = [sum(depth_counts[:i + 1]) for i in range(len(depth_counts))]
+    #print(depth_counts)
+    #print(depth_counts_sum)
 
 
     tree_attn_mask = torch.eye(tree_len, tree_len)
 
     for id,x in enumerate(nodes_wc):
         tree_attn_mask[id,x.all_index()]=1
-
-
-
+    #print(tree_attn_mask)
 
     tree_attn_mask_list0=[tree_attn_mask[:ml,:ml] for ml in depth_counts_sum]
     tree_attn_mask_list=[]
     for id,x in enumerate(tree_attn_mask_list0):
         x=x[-depth_counts[id]:]
         tree_attn_mask_list.append(x)
-
-
+        #print(x)
 
     tree_indices_list = [torch.zeros(ml, dtype=torch.long) for ml in depth_counts]
     repeat_nums=[[] for _ in depth_counts]
@@ -147,8 +145,10 @@ def generate_tree_buffers(tree_choices, device="cuda"):
             tree_indices_list[i][j] = cur_node.value + TOPK * (bias)
         repeat_nums[i].append(j - repeat_j+1)
         start += depth_counts[i]
+    #print(tree_indices_list)
 
     position_ids = [torch.zeros(ml, dtype=torch.long) for ml in depth_counts]
+    #print(position_ids)
 
     # start = 0
     # for i in range(len(depth_counts)):
