@@ -327,6 +327,7 @@ class EaModel(nn.Module):
         new_token = 0
 
         for idx in range(max_steps):
+            t0 = time.time()
             candidates, cart_candidates_prob, tree_candidates = generate_candidates(
                 tree_logits,
                 tree_buffers["tree_indices"],
@@ -340,6 +341,7 @@ class EaModel(nn.Module):
             # p self.tokenizer.batch_decode(candidates)
 
             # verify-forward!
+            #breakpoint()
             logits, hidden_state_new, outputs = tree_decoding(
                 self,
                 tree_candidates,
@@ -355,6 +357,8 @@ class EaModel(nn.Module):
                 logits, candidates, logits_processor, cart_candidates_prob, tree_logits[2], tree_buffers["p_indices"],
                 tree_candidates, tree_buffers["b_indices"]
             )
+            t1 = time.time()
+            print(f'verify total = {t1-t0}')
 
             input_ids, tree_logits, new_token, hidden_state, sample_token = update_inference_inputs(
                 input_ids,

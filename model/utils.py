@@ -285,6 +285,7 @@ def tree_decoding(
 ):
     position_ids = tree_position_ids + input_ids.shape[1]
 
+    t0 = time.time()
     outputs, tree_logits, hidden_state = model(
         tree_candidates,
         output_orig=True,
@@ -292,6 +293,8 @@ def tree_decoding(
         position_ids=position_ids,
         init=False, # init=False in the verify stage
     )
+    t1 = time.time()
+    print(f'verify forward {tree_candidates.shape[-1]} = {t1-t0}')
 
     logits = tree_logits[0, retrieve_indices]
     return logits, hidden_state, outputs
@@ -437,9 +440,12 @@ def update_inference_inputs(
         token = token[None, None]
 
     # after init=True, this gets called recurrently.
+    t0 = time.time()
     tree_logits = model.ea_layer.topK_genrate(accept_hidden_state_new,
                                               input_ids=torch.cat((input_ids, token.to(input_ids.device)), dim=1),
                                               head=model.base_model.lm_head, logits_processor=logits_processor)
+    t1 = time.time()
+    print(f'ea_layer.topK_genrate = {t1-t0}')
 
     new_token += accept_length + 1
 
