@@ -1,3 +1,4 @@
+import time
 # Source: https://github.com/huggingface/transformers/blob/v4.31-release/src/transformers/models/llama/modeling_llama.py
 # Modifications are denoted by the symbol: [MODIFIED]
 
@@ -1040,6 +1041,7 @@ class LlamaModel(LlamaPreTrainedModel):
                     None,
                 )
             else:
+                t2 = time.time_ns()
                 layer_outputs = decoder_layer(
                     hidden_states,
                     attention_mask=attention_mask,
@@ -1048,6 +1050,8 @@ class LlamaModel(LlamaPreTrainedModel):
                     output_attentions=output_attentions,
                     use_cache=use_cache,
                 )
+                t3 = time.time_ns()
+                print('\n', idx, (t3-t2) / 1_000_000)
 
             hidden_states = layer_outputs[0]
 
