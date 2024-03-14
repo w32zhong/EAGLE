@@ -1051,7 +1051,7 @@ class LlamaModel(LlamaPreTrainedModel):
                     use_cache=use_cache,
                 )
                 t3 = time.time_ns()
-                print('\n', idx, (t3-t2) / 1_000_000)
+                print(idx, (t3-t2) / 1_000_000)
 
             hidden_states = layer_outputs[0]
 

@@ -294,7 +294,8 @@ def tree_decoding(
         init=False, # init=False in the verify stage
     )
     t1 = time.time()
-    print(f'verify forward {tree_candidates.shape[-1]} = {t1-t0}')
+    breakpoint()
+    print(f'verify forward {tree_candidates.shape[-1:]} = {t1-t0}')
 
     logits = tree_logits[0, retrieve_indices]
     return logits, hidden_state, outputs
