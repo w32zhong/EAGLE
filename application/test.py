@@ -13,7 +13,7 @@ model = EaModel.from_pretrained(
 )
 model.eval()
 
-prompt = '[INST] How long did the Hundred Years War last? Give a short answer, keep your answer concise. [/INST]'
+prompt = '[INST] tell me a few interesting facts about the sun and the moon. [/INST]'
 print(prompt)
 input_ids = model.tokenizer([prompt], return_tensors="pt").input_ids
 input_len = input_ids.shape[1]
@@ -26,4 +26,4 @@ print()
 
 time_delta = time.time() - start_time
 out_tokens = len(decode_ids)
-print(time_delta, out_tokens, out_tokens / time_delta)
+print('e2e speed:', time_delta, out_tokens, out_tokens / time_delta)

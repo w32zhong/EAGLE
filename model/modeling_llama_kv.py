@@ -1,4 +1,44 @@
 import time
+import json
+import statistics
+from collections import defaultdict
+
+
+class TimeStats():
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self._hist = defaultdict(list)
+        self._start = defaultdict(float)
+
+    def start(self, key):
+        self._start[key] = time.time_ns()
+
+    def stop(self, key, verbose=False):
+        dt = time.time_ns() - self._start[key]
+        dt_ms = dt / 1_000_000
+        self._hist[key].append(dt_ms)
+        if verbose: print(key, dt_ms, 'ms')
+
+    def f(self, func_name, hist):
+        func = getattr(statistics, func_name)
+        if func_name == 'stdev' and len(hist) < 2:
+            return float('nan')
+        else:
+            return func(hist)
+
+    def report(self):
+        return json.dumps({
+            k: {
+                f'cnt': len(self._hist[k]),
+                f'mean': self.f('mean', self._hist[k]),
+                f'stdev': self.f('stdev', self._hist[k]),
+            }
+            for k in self._hist.keys()
+        }, indent=2)
+
+time_stats = TimeStats()
 # Source: https://github.com/huggingface/transformers/blob/v4.31-release/src/transformers/models/llama/modeling_llama.py
 # Modifications are denoted by the symbol: [MODIFIED]
 
@@ -532,6 +572,7 @@ class LlamaAttention(nn.Module):
             output_attentions: bool = False,
             use_cache: bool = False,
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
+        time_stats.start('attention_init')
         bsz, q_len, _ = hidden_states.size()
 
         if self.pretraining_tp > 1:
@@ -580,11 +621,17 @@ class LlamaAttention(nn.Module):
         kv_seq_len = key_states.shape[-2]
         if past_key_value is not None:
             kv_seq_len += past_key_value[0].shape[-2]
+
+        time_stats.stop('attention_init')
+
+        time_stats.start('attention_rotary')
         cos, sin = self.rotary_emb(value_states, seq_len=kv_seq_len)
         query_states, key_states = apply_rotary_pos_emb(
             query_states, key_states, cos, sin, position_ids
         )
+        time_stats.stop('attention_rotary')
 
+        time_stats.start('attention_cache')
         # [MODIFIED] Using KVCache mechanism for preallocated GPU memory optimization
         # past_key_value is utilized to leverage previously computed key and value states.
         # If past_key_value is available, reuse the states for k, v, and self_attention.
@@ -597,7 +644,9 @@ class LlamaAttention(nn.Module):
         # repeat k/v heads if n_kv_heads < n_heads
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
+        time_stats.stop('attention_cache')
 
+        time_stats.start('attention_op')
         attn_weights = torch.matmul(
             query_states, key_states.transpose(2, 3)
         ) / math.sqrt(self.head_dim)
@@ -648,6 +697,7 @@ class LlamaAttention(nn.Module):
 
         if not output_attentions:
             attn_weights = None
+        time_stats.stop('attention_op')
 
         return attn_output, attn_weights, past_key_value
 
@@ -715,6 +765,7 @@ class LlamaDecoderLayer(nn.Module):
         hidden_states = self.input_layernorm(hidden_states)
 
         # Self Attention
+        time_stats.start('attention')
         hidden_states, self_attn_weights, present_key_value = self.self_attn(
             hidden_states=hidden_states,
             attention_mask=attention_mask,
@@ -724,12 +775,15 @@ class LlamaDecoderLayer(nn.Module):
             use_cache=use_cache,
         )
         hidden_states = residual + hidden_states
+        time_stats.stop('attention')
 
         # Fully Connected
+        time_stats.start('mlp')
         residual = hidden_states
         hidden_states = self.post_attention_layernorm(hidden_states)
         hidden_states = self.mlp(hidden_states)
         hidden_states = residual + hidden_states
+        time_stats.stop('mlp')
 
         outputs = (hidden_states,)
 
@@ -1014,6 +1068,7 @@ class LlamaModel(LlamaPreTrainedModel):
         all_self_attns = () if output_attentions else None
         next_decoder_cache = () if use_cache else None
 
+        time_stats.reset()
         for idx, decoder_layer in enumerate(self.layers):
             # if idx==16:
             #     print(idx)
@@ -1041,7 +1096,7 @@ class LlamaModel(LlamaPreTrainedModel):
                     None,
                 )
             else:
-                t2 = time.time_ns()
+                time_stats.start('per_layer')
                 layer_outputs = decoder_layer(
                     hidden_states,
                     attention_mask=attention_mask,
@@ -1050,8 +1105,7 @@ class LlamaModel(LlamaPreTrainedModel):
                     output_attentions=output_attentions,
                     use_cache=use_cache,
                 )
-                t3 = time.time_ns()
-                print('\n', idx, (t3-t2) / 1_000_000)
+                time_stats.stop('per_layer')
 
             hidden_states = layer_outputs[0]
 
@@ -1061,6 +1115,8 @@ class LlamaModel(LlamaPreTrainedModel):
             if output_attentions:
                 all_self_attns += (layer_outputs[1],)
 
+        #print(attention_mask.shape)
+        #print(time_stats.report())
         hidden_states = self.norm(hidden_states)
 
         # add hidden states from the last decoder layer
