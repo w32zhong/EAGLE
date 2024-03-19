@@ -487,6 +487,7 @@ class Model(nn.Module):
 
 
         #self.init_tree()
+        print('\n\nEAGLE layers:', config.num_hidden_layers)
 
         self.layers = nn.ModuleList([LlamaDecoderLayer(config,index) for index in range(config.num_hidden_layers)])
         self.fc=nn.Linear(2*config.hidden_size,config.hidden_size,bias=bias)
