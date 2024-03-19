@@ -1,32 +1,9 @@
-<img src="figs/logo.png" alt="EAGLE" width="220" align="left"><div align="center"><h1>&nbsp;EAGLE: Lossless Acceleration of LLM Decoding by Feature Extrapolation</h1></div>
+```sh
+python application/test.py
 
-<p align="center">
-| <a href="https://arxiv.org/pdf/2401.15077.pdf"><b>Paper</b></a> | <a href="https://sites.google.com/view/
-eagle-llm"><b>Blog</b></a> |
-</p>
-
-
-<p align="center">
-  <a href="">
-    <img src="https://img.shields.io/badge/Version-v1.1.0-orange.svg" alt="Version">
-  </a>
-  <a href="https://opensource.org/licenses/Apache-2.0">
-    <img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License">
-  </a>
-  <a href="https://github.com/SafeAILab/EAGLE/issues">
-    <img src="https://img.shields.io/badge/Maintained%3F-yes-green.svg" alt="Maintenance">
-  </a>
-  <a href="https://github.com/SafeAILab/EAGLE/pulls">
-    <img src="https://img.shields.io/badge/Contributions-welcome-brightgreen.svg?style=flat" alt="Contributions welcome">
-  </a>
-</p>
-
-
-##
-
-<p align="center">
-  <img src="./figs/benchmark.png" alt="benchmark" width="790">
-</p>
+# main loop: ./model/ea_model.py 329
+# drafting: ./model/utils.py 444 
+```
 
 EAGLE (Extrapolation Algorithm for Greater Language-model Efficiency) is a new baseline for fast decoding of Large Language Models (LLMs) with provable performance maintenance. This approach involves extrapolating the second-top-layer contextual feature vectors of LLMs, enabling a significant boost in generation efficiency. EAGLE is building upon the following First Principle:
 
