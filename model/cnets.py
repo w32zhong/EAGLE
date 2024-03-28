@@ -592,6 +592,12 @@ class Model(nn.Module):
 
         #hidden_states=self.act(self.fc(torch.cat((inputs_embeds,hidden_states),dim=-1)))
         inputs_embeds=inputs_embeds.to(hidden_states.dtype)
+
+        # the core line of eagle layer!
+        # inputs_embeds: [B, L, 4096]
+        # hidden_states: [B, L, 4096]
+        # concatenate: [B, L, 8192]
+        # down-pooling: [B, L, 4096]
         hidden_states = self.fc(torch.cat((inputs_embeds, hidden_states), dim=-1))
 
 

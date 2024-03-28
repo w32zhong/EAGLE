@@ -142,12 +142,14 @@ class EaModel(nn.Module):
             input_ids = torch.cat((input_ids, token.to(input_ids.device)), dim=1)
             # Clone the output hidden states
 
+            # hidden_states: [B, L, 4096]
+            # input_ids: [B, L]
             ea_logits = self.ea_layer.topK_genrate(hidden_states, input_ids, self.base_model.lm_head, logits_processor)
             #interact
             #self.tokenizer.decode(input_ids[0])
             #for i in range(len(ea_logits[0])):
             #    print(i, [self.tokenizer.decode([t]) for t in ea_logits[0][i]])
-            #breakpoint()
+            breakpoint()
 
             if output_orig:
                 return ea_logits, outputs, orig, hidden_states, token
@@ -379,8 +381,6 @@ class EaModel(nn.Module):
             )
             t1 = time.time()
             #print(f'drafting total = {t1-t0}')
-
-            breakpoint()
 
             yield input_ids
 
