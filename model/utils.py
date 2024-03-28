@@ -80,9 +80,11 @@ def pad_path(path, length, pad_value=-2):
 
 def generate_tree_buffers(tree_choices, device="cuda"):
     sorted_tree_choices = sorted(tree_choices, key=lambda x: (len(x), x))
-    tree_len = len(sorted_tree_choices) + 1
+    # [[0], [1], [2], [3], [0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [2, 0], [2, 1], [3, 0], [0, 0, 0], [0, 0, 1] ...
+    # sorted by depth
 
-    # Initialize depth_counts to keep track of how many choices have a particular depth
+    tree_len = len(sorted_tree_choices) + 1 # number of tree nodes
+
     depth_counts = []
     prev_depth = 0
     for path in sorted_tree_choices:
@@ -91,6 +93,7 @@ def generate_tree_buffers(tree_choices, device="cuda"):
             depth_counts.append(0)
         depth_counts[depth - 1] += 1
         prev_depth = depth
+    # depth_counts: [4, 8, 8, 3, 2]
 
     tree_attn_mask = torch.eye(tree_len, tree_len)
     tree_attn_mask[:, 0] = 1
@@ -106,6 +109,13 @@ def generate_tree_buffers(tree_choices, device="cuda"):
                 ancestor_idx.append(sorted_tree_choices.index(cur_tree_choice[:c + 1]) + 1)
             tree_attn_mask[j + start + 1, ancestor_idx] = 1
         start += depth_counts[i]
+    #import matplotlib.pyplot as plt
+    #import plotext as tplt
+    #plt.imshow(tree_attn_mask)
+    #plt.savefig('outputs/tmp.png')
+    #tplt.image_plot('outputs/tmp.png')
+    #tplt.show()
+    #breakpoint()
 
     tree_indices = torch.zeros(tree_len, dtype=torch.long)
     p_indices = [0 for _ in range(tree_len - 1)]

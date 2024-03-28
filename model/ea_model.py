@@ -149,7 +149,7 @@ class EaModel(nn.Module):
             #self.tokenizer.decode(input_ids[0])
             #for i in range(len(ea_logits[0])):
             #    print(i, [self.tokenizer.decode([t]) for t in ea_logits[0][i]])
-            breakpoint()
+            #breakpoint()
 
             if output_orig:
                 return ea_logits, outputs, orig, hidden_states, token
@@ -282,6 +282,7 @@ class EaModel(nn.Module):
         if hasattr(self, "tree_choices") and self.tree_choices == tree_choices:
             tree_buffers = self.tree_buffers
         else:
+            # construct buffer for tree-attention
             tree_buffers = generate_tree_buffers(
                 tree_choices, device=self.base_model.model.layers[-1].self_attn.q_proj.weight.device
             )
