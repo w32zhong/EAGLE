@@ -378,7 +378,9 @@ class EaModel(nn.Module):
                 sample_p
             )
             t1 = time.time()
-            print(f'drafting total = {t1-t0}')
+            #print(f'drafting total = {t1-t0}')
+
+            breakpoint()
 
             yield input_ids
 

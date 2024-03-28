@@ -16,14 +16,15 @@ model.eval()
 
 prompt = '[INST] tell me a few interesting facts about the sun and the moon. [/INST]'
 input_ids = model.tokenizer([prompt], return_tensors="pt").input_ids
-input_len = input_ids.shape[1]
+past_len = input_ids.shape[1]
 print(prompt)
 start_time = time.time()
 for output_ids in model.ea_generate(input_ids, max_steps=512):
     #os.system('clear')
-    decode_ids = output_ids[0, input_len:].tolist()
+    decode_ids = output_ids[0, past_len:].tolist()
+    past_len = output_ids.shape[1]
     text = model.tokenizer.decode(decode_ids)
-    print(text)
+    print(text, end=' ', flush=True)
 print()
 
 time_delta = time.time() - start_time
