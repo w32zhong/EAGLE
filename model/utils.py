@@ -137,6 +137,7 @@ def generate_tree_buffers(tree_choices, device="cuda"):
                     b = []
             else:
                 parent = cur_parent
+            # index numbering in a n-ary tree space 
             tree_indices[start + j + 1] = cur_tree_choice[-1] + TOPK * (i + bias) + 1
             p_indices[start + j] = inlayer_bias
             if len(b) > 0:
@@ -145,6 +146,7 @@ def generate_tree_buffers(tree_choices, device="cuda"):
                 b_indices[start + j] = []
             b.append(cur_tree_choice[-1] + TOPK * (i + bias) + 1)
         start += depth_counts[i]
+    # tree_indices: [  0,   1,   2,   3,   4,  11,  12,  13,  21 ... ]
 
     p_indices = [-1] + p_indices
     tree_position_ids = torch.zeros(tree_len, dtype=torch.long)
@@ -152,11 +154,12 @@ def generate_tree_buffers(tree_choices, device="cuda"):
     for i in range(len(depth_counts)):
         tree_position_ids[start + 1: start + depth_counts[i] + 1] = i + 1
         start += depth_counts[i]
+    # tree_position_ids: [0, 1, 1, 1, 1, 2, 2, 2, 2,  ...]
 
     retrieve_indices_nest = []
     retrieve_paths = []
     for i in range(len(sorted_tree_choices)):
-        cur_tree_choice = sorted_tree_choices[-i - 1]
+        cur_tree_choice = sorted_tree_choices[-i - 1] # go from back up
         retrieve_indice = []
         if cur_tree_choice in retrieve_paths:
             continue
@@ -169,8 +172,23 @@ def generate_tree_buffers(tree_choices, device="cuda"):
     retrieve_indices = [pad_path(path, max_length) for path in retrieve_indices_nest]
     retrieve_indices = torch.tensor(retrieve_indices, dtype=torch.long)
     retrieve_indices = retrieve_indices + 1
-    retrieve_indices = torch.cat([torch.zeros((retrieve_indices.shape[0], 1), dtype=torch.long), retrieve_indices],
-                                 dim=1)
+    retrieve_indices = torch.cat([torch.zeros((retrieve_indices.shape[0], 1), dtype=torch.long), retrieve_indices], dim=1)
+    # retrieve_indices: leaf-root paths, width is determined by the max_length
+    # tensor([[ 0,  1,  5, 13, 21, 25],
+    #         [ 0,  1,  5, 13, 21, 24],
+    #         [ 0,  1,  5, 13, 23, -1],
+    #         [ 0,  1,  5, 13, 22, -1],
+    #         [ 0,  2,  8, 20, -1, -1],
+    #         [ 0,  1,  7, 19, -1, -1],
+    #         [ 0,  1,  7, 18, -1, -1],
+    #         [ 0,  1,  6, 17, -1, -1],
+    #         [ 0,  1,  6, 16, -1, -1],
+    #         [ 0,  1,  5, 15, -1, -1],
+    #         [ 0,  1,  5, 14, -1, -1],
+    #         [ 0,  4, 12, -1, -1, -1],
+    #         [ 0,  3, 11, -1, -1, -1],
+    #         [ 0,  3, 10, -1, -1, -1],
+    #         [ 0,  2,  9, -1, -1, -1]])
 
     p_indices = torch.tensor(p_indices)
     p_indices_new = p_indices[retrieve_indices]
