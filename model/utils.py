@@ -234,10 +234,11 @@ def generate_tree_buffers(tree_choices, device="cuda"):
 
 
 def initialize_tree(input_ids, model, tree_attn_mask, past_key_values, logits_processor):
+    # call ./model/ea_model.py:forward()
     tree_logits, outputs, logits, hidden_state, sample_token = model(
         input_ids, past_key_values=past_key_values, output_orig=True, logits_processor=logits_processor
     )
-    model.base_model.model.tree_mask = tree_attn_mask
+    model.base_model.model.tree_mask = tree_attn_mask # save tree_attn_mask here
     return tree_logits, logits, hidden_state, sample_token
 
 
