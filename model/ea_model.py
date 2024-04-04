@@ -296,13 +296,13 @@ class EaModel(nn.Module):
 
         # tree_buffers.keys():
         [
-            'tree_attn_mask',
-            'tree_indices', # node idx -> node id @ 10-degree binary tree
-            'tree_position_ids', # node idx -> node depth
-            'retrieve_indices', # tree_indices[retrieve_indices] = leaf-root paths
+            'tree_attn_mask', # torch.Size([1, 1, 26, 26])
+            'tree_indices', # torch.Size([26]), i.e., node idx -> node id @ 10-degree binary tree
+            'tree_position_ids', # torch.Size([26]), i.e., node idx -> node depth
+            'retrieve_indices', # torch.Size([15, 6]), i.e., tree_indices[retrieve_indices] = leaf-root paths
             'p_indices',
             'b_indices',
-            'retrieve_indices_head'
+            'retrieve_indices_head' # torch.Size([15, 6])
         ]
 
         # Initialize the past key and value states
