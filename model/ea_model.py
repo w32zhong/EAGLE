@@ -1,6 +1,5 @@
 import copy
 import json
-import time
 
 import torch
 import torch.nn as nn
@@ -17,7 +16,8 @@ from .cnets import Model
 from .configs import EConfig
 from huggingface_hub import hf_hub_download
 
-
+from .time_stats import TimeStats
+time_stats = TimeStats()
 
 
 class EaModel(nn.Module):
@@ -273,6 +273,8 @@ class EaModel(nn.Module):
             tree_choices=mc_sim_7b_63,
 
     ):
+        time_stats.start('ea_generate init')
+
         if temperature > 1e-5:
             logits_processor = prepare_logits_processor(temperature=temperature, top_p=top_p, top_k=top_k)
         else:
@@ -341,8 +343,10 @@ class EaModel(nn.Module):
         # sample_token: [1, 1]
         new_token = 0
 
+        time_stats.stop('ea_generate init')
+
         for idx in range(max_steps):
-            t0 = time.time()
+            time_stats.start('ea_generate iteration')
             candidates, cart_candidates_prob, tree_candidates = generate_candidates(
                 tree_logits,
                 tree_buffers["tree_indices"],
@@ -360,6 +364,7 @@ class EaModel(nn.Module):
             # verify-forward!
             # initialize_tree(init=False, output_orig=True)
             # which returns (outputs, orig, hidden_states)
+            time_stats.start('ea_generate verify forward')
             logits, hidden_state_new, outputs = tree_decoding(
                 self,
                 tree_candidates,
@@ -368,17 +373,17 @@ class EaModel(nn.Module):
                 input_ids,
                 tree_buffers["retrieve_indices_head"],
             )
+            time_stats.stop('ea_generate verify forward')
             # p self.tokenizer.batch_decode(logits[:,:-1].argmax(-1))
 
             # verify evaluate!
+            time_stats.start('ea_generate verify eval')
             best_candidate, accept_length, sample_p = evaluate_posterior(
                 logits, candidates, logits_processor, cart_candidates_prob, tree_logits[2], tree_buffers["p_indices"],
                 tree_candidates, tree_buffers["b_indices"]
             )
-            t1 = time.time()
-            #print(f'verify total = {t1-t0}')
+            time_stats.stop('ea_generate verify eval')
 
-            t0 = time.time()
             input_ids, tree_logits, new_token, hidden_state, sample_token = update_inference_inputs(
                 input_ids,
                 candidates,
@@ -394,14 +399,15 @@ class EaModel(nn.Module):
                 self,
                 hidden_state,
                 hidden_state_new,
-                sample_p
+                sample_p,
+                time_stats
             )
-            t1 = time.time()
-            #print(f'drafting total = {t1-t0}')
+            time_stats.stop('ea_generate iteration')
 
             yield input_ids
 
             if self.tokenizer.eos_token_id in input_ids[0, input_len:].tolist():
+                print(time_stats.report())
                 break
             if new_token > 1024:
                 break
