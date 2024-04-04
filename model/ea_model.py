@@ -350,11 +350,16 @@ class EaModel(nn.Module):
                 sample_token,
                 logits_processor
             )
-            # self.tokenizer.decode(sample_token[0])
+            # candidates of torch.Size([15, 6]) represents possible leaf-root paths
+            # it is the same shape with tree_buffers['retrieve_indices']
+
+            # p self.tokenizer.decode(sample_token[0])
             # p self.tokenizer.decode(tree_candidates[0])
             # p self.tokenizer.batch_decode(candidates)
 
             # verify-forward!
+            # initialize_tree(init=False, output_orig=True)
+            # which returns (outputs, orig, hidden_states)
             logits, hidden_state_new, outputs = tree_decoding(
                 self,
                 tree_candidates,
@@ -365,7 +370,7 @@ class EaModel(nn.Module):
             )
             # p self.tokenizer.batch_decode(logits[:,:-1].argmax(-1))
 
-            # actual-verify!
+            # verify evaluate!
             best_candidate, accept_length, sample_p = evaluate_posterior(
                 logits, candidates, logits_processor, cart_candidates_prob, tree_logits[2], tree_buffers["p_indices"],
                 tree_candidates, tree_buffers["b_indices"]
