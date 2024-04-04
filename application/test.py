@@ -19,9 +19,11 @@ input_ids = model.tokenizer([prompt], return_tensors="pt").input_ids
 past_len = input_ids.shape[1]
 print(prompt)
 start_time = time.time()
+cnt_tokens = 0
 for output_ids in model.ea_generate(input_ids, max_steps=512):
     #os.system('clear')
     decode_ids = output_ids[0, past_len:].tolist()
+    cnt_tokens += len(decode_ids)
     past_len = output_ids.shape[1]
     text = model.tokenizer.decode(decode_ids)
     print(text, end=' ', flush=True)
@@ -29,4 +31,4 @@ print()
 
 time_delta = time.time() - start_time
 out_tokens = len(decode_ids)
-print('e2e speed:', time_delta, out_tokens, out_tokens / time_delta)
+print('e2e speed:', time_delta, cnt_tokens, cnt_tokens / time_delta)
