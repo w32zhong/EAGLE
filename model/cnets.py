@@ -776,6 +776,7 @@ class Model(nn.Module):
                 out_hidden, past_key_values = self(hidden_states, input_ids=input_ids, use_cache=True)
             # hidden_states: [1, L, 4096]
             # out_hidden: [1, L, 4096]
+
             self.stable_kv=past_key_values
 
             # take out the last hidden!
@@ -795,9 +796,10 @@ class Model(nn.Module):
             # utils::generate_tree_buffers()
             # tree_buffer['tree_indices'] here is
             # [[0, 1, 2, 3], [ 0,  1,  2, 10], [0], [0]]
-            # of length depth
+            # of length depth, each represent the rank of an internal/non-leaf node
+            # in the imaginary 10-ary draft tree.
             for i in range(len(self.tree_buffer['tree_indices'])):
-                # i loops over all depths
+                # i loops over all non-leaf depths
                 if logits_processor is not None:
                     topk_index,topk_prob,op=self.sample(last_headout,logits_processor,k=top_k,)
                 else:
@@ -809,8 +811,9 @@ class Model(nn.Module):
                 ss_prob.append(topk_prob)
                 ss_op.append(op)
 
-                topk_index = topk_index.view(-1) # [10]
+                topk_index = topk_index.view(-1) # [n * 10] where n is the #subtrees
                 select_index=topk_index[self.tree_buffer['tree_indices'][i]] # [4]
+                # update input_ids to the next frontier
                 input_ids=select_index[None,:] # [1, 4]
 
                 if i==0:
@@ -820,7 +823,9 @@ class Model(nn.Module):
                     # get next draft depth hidden
                     hidden_states=out_hidden
 
-                hidden_states=self.repeat_hidden(hidden_states,self.tree_buffer["repeat_nums"][i])
+                # self.tree_buffer["repeat_nums"]:
+                # [[4], [3, 1], [1], [1]]
+                hidden_states=self.repeat_hidden(hidden_states, self.tree_buffer["repeat_nums"][i])
                 self.tree_mask=self.tree_buffer['attn_mask'][i]
                 position_ids=len_posi+self.tree_buffer["position_ids"][i]
                 # calling cnets:forward() again!

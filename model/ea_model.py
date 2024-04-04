@@ -147,7 +147,7 @@ class EaModel(nn.Module):
             # input_ids: [B, L]
             # ea_logits: (torch.cat(ss_token),torch.cat(ss_prob),ss_op)
             ea_logits = self.ea_layer.topK_genrate(hidden_states, input_ids, self.base_model.lm_head, logits_processor)
-            # ea_logits[0]: [11, topk=10] where 11 is the draft token tree size
+            # ea_logits[0]: [1+4+4+1+1=11, topk=10] where 11 is the draft token tree non-leaf size
 
             #interact
             #self.tokenizer.decode(input_ids[0])
