@@ -139,17 +139,20 @@ class EaModel(nn.Module):
             else:
                 token = torch.argmax(orig[:, -1])
                 token = token[None, None]
+
+            # concate old input_ids with the new input_id
             input_ids = torch.cat((input_ids, token.to(input_ids.device)), dim=1)
-            # Clone the output hidden states
 
             # hidden_states: [B, L, 4096]
             # input_ids: [B, L]
+            # ea_logits: (torch.cat(ss_token),torch.cat(ss_prob),ss_op)
             ea_logits = self.ea_layer.topK_genrate(hidden_states, input_ids, self.base_model.lm_head, logits_processor)
+            # ea_logits[0]: [11, topk=10] where 11 is the draft token tree size
+
             #interact
             #self.tokenizer.decode(input_ids[0])
             #for i in range(len(ea_logits[0])):
             #    print(i, [self.tokenizer.decode([t]) for t in ea_logits[0][i]])
-            #breakpoint()
 
             if output_orig:
                 return ea_logits, outputs, orig, hidden_states, token
@@ -291,6 +294,7 @@ class EaModel(nn.Module):
         self.tree_buffers = tree_buffers
         self.tree_choices = tree_choices
 
+        # tree_buffers.keys():
         [
             'tree_attn_mask',
             'tree_indices', # node idx -> node id @ 10-degree binary tree
@@ -300,10 +304,6 @@ class EaModel(nn.Module):
             'b_indices',
             'retrieve_indices_head'
         ]
-        #import matplotlib.pyplot as plt
-        #plt.imshow(tree_buffers['tree_attn_mask'].cpu()[0][0])
-        #plt.savefig('attn_mask.png')
-        #breakpoint()
 
         # Initialize the past key and value states
         if hasattr(self, "past_key_values"):
@@ -324,9 +324,21 @@ class EaModel(nn.Module):
 
         input_len = input_ids.shape[1]
         reset_tree_mode(self)
+
+        # initialize_tree(init=True, output_orig=True)
+        # returns what EaModel::forward() returns:
+        # return ea_logits, ..., orig, hidden_states, token
+        # (except the 2nd value)
+        # where ea_logits/tree_logits is returned from cnets::topK_genrate()
+        # which returns (torch.cat(ss_token), torch.cat(ss_prob), ss_op)
         tree_logits, logits, hidden_state, sample_token = initialize_tree(
             input_ids, self, tree_buffers["tree_attn_mask"], past_key_values, logits_processor
         )
+        # input_ids: [1, L]
+        # tree_logits: ([11, 10], [11, 10], [None, None, None, None, None])
+        # logits: [1, L, 32000]
+        # hidden_state: [1, L, 4096]
+        # sample_token: [1, 1]
         new_token = 0
 
         for idx in range(max_steps):
@@ -338,7 +350,6 @@ class EaModel(nn.Module):
                 sample_token,
                 logits_processor
             )
-            # breakpoint()
             # self.tokenizer.decode(sample_token[0])
             # p self.tokenizer.decode(tree_candidates[0])
             # p self.tokenizer.batch_decode(candidates)

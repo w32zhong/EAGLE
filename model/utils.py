@@ -115,7 +115,6 @@ def generate_tree_buffers(tree_choices, device="cuda"):
     #plt.savefig('outputs/tmp.png')
     #tplt.image_plot('outputs/tmp.png')
     #tplt.show()
-    #breakpoint()
 
     tree_indices = torch.zeros(tree_len, dtype=torch.long)
     p_indices = [0 for _ in range(tree_len - 1)]
@@ -285,7 +284,6 @@ def generate_candidates(tree_logits, tree_indices, retrieve_indices, sample_toke
         [tree_candidates, torch.zeros((1), dtype=torch.long, device=tree_candidates.device)], dim=0)
 
     cart_candidates = tree_candidates_ext[retrieve_indices]
-    #breakpoint()
 
     if logits_processor is not None:
         candidates_tree_prob = tree_logits[1]
