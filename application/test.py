@@ -10,7 +10,7 @@ model = EaModel.from_pretrained(
     ea_model_path='yuhuili/EAGLE-llama2-chat-7B',
     torch_dtype=torch.float16,
     load_in_8bit=True,
-    device_map="auto"
+    device_map="cuda:0"
 )
 model.eval()
 
