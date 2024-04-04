@@ -21,6 +21,9 @@ class TimeStats():
         self._hist[key].append(dt_ms)
         if verbose: print(key, dt_ms, 'ms')
 
+    def push(self, key, val):
+        self._hist[key].append(val)
+
     def f(self, func_name, hist):
         func = getattr(statistics, func_name)
         if func_name == 'stdev' and len(hist) < 2:
@@ -31,6 +34,7 @@ class TimeStats():
     def report(self):
         return json.dumps({
             k: {
+                f'sum': sum(self._hist[k]),
                 f'cnt': len(self._hist[k]),
                 f'mean': self.f('mean', self._hist[k]),
                 f'stdev': self.f('stdev', self._hist[k]),
