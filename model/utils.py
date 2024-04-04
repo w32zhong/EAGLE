@@ -355,14 +355,34 @@ def evaluate_posterior(
         posterior_mask = (
                 candidates[:, 1:].to(logits.device) == torch.argmax(logits[:, :-1], dim=-1)
         ).int()
-        candidates_accept_length = (torch.cumprod(posterior_mask, dim=1)).sum(dim=1)
+        # posterior_mask of torch.Size([15, 5]) is the mark of good predictions
+        # [[0, 1, 1, 1, 1],
+        #  [0, 1, 1, 1, 0],
+        #  [0, 1, 1, 0, 0],
+        #  [0, 1, 1, 0, 0],
+        #  [1, 1, 1, 0, 0],
+        #  [0, 0, 0, 0, 0],
+        #  [0, 0, 1, 0, 0],
+        #  [0, 0, 0, 0, 0],
+        #  [0, 0, 1, 0, 0],
+        #  [0, 1, 0, 0, 0],
+        #  [0, 1, 0, 0, 0],
+        #  [0, 1, 0, 0, 0],
+        #  [0, 0, 0, 0, 0],
+        #  [0, 1, 0, 0, 0],
+        #  [1, 0, 0, 0, 0]]
+
+        # perform left to right cumprod, and then sum to get the number of left ones
+        candidates_accept_length = (torch.cumprod(posterior_mask, dim=1)).sum(dim=1) # torch.Size([15])
+
         accept_length = candidates_accept_length.max()
-        # Choose the best candidate
+        # Choose the best candidate / "branch"
         if accept_length == 0:
-            # Default to the first candidate if none are accepted
+            # Default to the first "branch" if none are accepted
             best_candidate = torch.tensor(0, dtype=torch.long, device=candidates.device)
         else:
             best_candidate = torch.argmax(candidates_accept_length).to(torch.long)
+
         return best_candidate, accept_length, logits[best_candidate, accept_length]
 
     else:
