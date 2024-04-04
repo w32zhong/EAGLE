@@ -80,8 +80,9 @@ def pad_path(path, length, pad_value=-2):
 
 def generate_tree_buffers(tree_choices, device="cuda"):
     sorted_tree_choices = sorted(tree_choices, key=lambda x: (len(x), x))
-    # [[0], [1], [2], [3], [0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [2, 0], [2, 1], [3, 0], [0, 0, 0], [0, 0, 1] ...
-    # sorted by depth
+    # [[0], [1], [2], [3], [0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [2, 0], [2, 1], [3, 0], [0, 0, 0], [0, 0, 1], [0, 0, 2], [0, 1, 0], [0, 1, 1], [0, 2, 0], [0, 2, 1], [1, 0, 0], [0, 0, 0, 0], [0, 0, 0, 1], [0, 0, 0, 2], [0, 0, 0, 0, 0], [0, 0, 0, 0, 1]]
+    # See https://imgur.com/a/KyZKFQh
+    # (sorted by depth)
 
     tree_len = len(sorted_tree_choices) + 1 # number of tree nodes
 
