@@ -350,8 +350,8 @@ class EaModel(nn.Module):
                 sample_token,
                 logits_processor
             )
-            # candidates of torch.Size([15, 6]) represents possible leaf-root paths
-            # it is the same shape with tree_buffers['retrieve_indices']
+            # candidates of size [15, 6] represents possible leaf-root paths
+            # tree_candidates of size [26], a draft tree of vocabularies
 
             # p self.tokenizer.decode(sample_token[0])
             # p self.tokenizer.decode(tree_candidates[0])

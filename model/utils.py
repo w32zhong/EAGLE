@@ -272,18 +272,19 @@ def reset_past_key_values(passed_key_values):
 def generate_candidates(tree_logits, tree_indices, retrieve_indices, sample_token, logits_processor):
     sample_token = sample_token.to(tree_indices.device)
 
-    candidates_logit = sample_token[0]
+    candidates_logit = sample_token[0] # [1]
 
-    candidates_tree_logits = tree_logits[0]
+    candidates_tree_logits = tree_logits[0] # [11, 10]
 
+    # cat([1], [110], dim=-1)
     candidates = torch.cat([candidates_logit, candidates_tree_logits.view(-1)], dim=-1)
 
-    tree_candidates = candidates[tree_indices]
-    # tree_candidates is selected tree_logits, same structure.
+    tree_candidates = candidates[tree_indices] # [26], a draft tree of vocabularies
 
     tree_candidates_ext = torch.cat(
         [tree_candidates, torch.zeros((1), dtype=torch.long, device=tree_candidates.device)], dim=0)
 
+    # turn a tree into leaf-root paths
     cart_candidates = tree_candidates_ext[retrieve_indices]
 
     if logits_processor is not None:
