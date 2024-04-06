@@ -369,6 +369,12 @@ def evaluate_posterior(
         #  [0, 1, 0, 0, 0],
         #  [1, 0, 0, 0, 0]]
 
+        # notice that candidates is of torch.Size([15, 6])
+        # but posterior_mask is of torch.Size([15, 5])
+        # because the first candidates at [15, 0] is always true,
+        # as it is obtained by verify forward().
+        # that is why our accept_length will need to add 1, as there is a guranteed accepted token.
+
         # perform left to right cumprod, and then sum to get the number of left ones
         candidates_accept_length = (torch.cumprod(posterior_mask, dim=1)).sum(dim=1) # torch.Size([15])
 
