@@ -383,8 +383,9 @@ class EaModel(nn.Module):
                 tree_candidates, tree_buffers["b_indices"]
             )
             time_stats.stop('ea_generate verify eval')
+            time_stats.push('#new tokens per iteration', accept_length.item() + 1)
 
-            input_ids, tree_logits, (new_token, nn_token), hidden_state, sample_token = update_inference_inputs(
+            input_ids, tree_logits, new_token, hidden_state, sample_token = update_inference_inputs(
                 input_ids,
                 candidates,
                 best_candidate,
@@ -403,7 +404,6 @@ class EaModel(nn.Module):
                 time_stats
             )
             time_stats.stop('ea_generate iteration')
-            time_stats.push('#tokens in iteration', nn_token.item())
 
             yield input_ids
 

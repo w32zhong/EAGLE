@@ -495,7 +495,7 @@ def update_inference_inputs(
 
     new_token += accept_length + 1
 
-    return input_ids, tree_logits, (new_token, accept_length + 1), None, token
+    return input_ids, tree_logits, new_token, None, token
 
 
 if __name__ == "__main__":
