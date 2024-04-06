@@ -385,6 +385,7 @@ class EaModel(nn.Module):
             time_stats.stop('ea_generate verify eval')
             time_stats.push('#new tokens per iteration', accept_length.item() + 1)
 
+            last_input_ids = input_ids
             input_ids, tree_logits, new_token, hidden_state, sample_token = update_inference_inputs(
                 input_ids,
                 candidates,
@@ -404,6 +405,10 @@ class EaModel(nn.Module):
                 time_stats
             )
             time_stats.stop('ea_generate iteration')
+
+            #print('new tokens:', accept_length.item() + 1)
+            #print('output tokens:', input_ids.shape[1] - last_input_ids.shape[1])
+            assert accept_length.item() + 1 == input_ids.shape[1] - last_input_ids.shape[1]
 
             yield input_ids
 
