@@ -327,7 +327,8 @@ def tree_decoding(
 
 
 def evaluate_posterior(
-        logits, candidates, logits_processor, cart_candidates_prob, op, p_indices, tree_candidates, b_indices
+        logits, candidates, logits_processor, cart_candidates_prob, op, p_indices, tree_candidates, b_indices,
+        time_stats, retrieve_indices
 ):
     """
     Evaluate the posterior probabilities of the candidates based on the provided logits and choose the best candidate.
@@ -368,12 +369,25 @@ def evaluate_posterior(
         #  [0, 0, 0, 0, 0],
         #  [0, 1, 0, 0, 0],
         #  [1, 0, 0, 0, 0]]
-
         # notice that candidates is of torch.Size([15, 6])
         # but posterior_mask is of torch.Size([15, 5])
         # because the first candidates at [15, 0] is always true,
         # as it is obtained by verify forward().
         # that is why our accept_length will need to add 1, as there is a guranteed accepted token.
+
+        # get acceptance rate by depth?
+        if False:
+            valid_paths = (-1 != retrieve_indices[:,1:])
+            general_accepted = posterior_mask[valid_paths].sum()
+            general_guesses = valid_paths.sum()
+            time_stats.push('depth-all accepted', general_accepted.item())
+            time_stats.push('depth-all total', general_guesses.item())
+            for depth in range(posterior_mask.shape[1]):
+                valid_paths_at_detph = valid_paths[:,depth]
+                depth_accepted = posterior_mask[:,depth][valid_paths_at_detph].sum()
+                depth_guesses = valid_paths_at_detph.sum()
+                time_stats.push(f'depth-{depth} accepted', depth_accepted.item())
+                time_stats.push(f'depth-{depth} total', depth_guesses.item())
 
         # perform left to right cumprod, and then sum to get the number of left ones
         candidates_accept_length = (torch.cumprod(posterior_mask, dim=1)).sum(dim=1) # torch.Size([15])

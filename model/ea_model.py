@@ -380,7 +380,8 @@ class EaModel(nn.Module):
             time_stats.start('ea_generate verify eval')
             best_candidate, accept_length, sample_p = evaluate_posterior(
                 logits, candidates, logits_processor, cart_candidates_prob, tree_logits[2], tree_buffers["p_indices"],
-                tree_candidates, tree_buffers["b_indices"]
+                tree_candidates, tree_buffers["b_indices"],
+                time_stats, tree_buffers["retrieve_indices"]
             )
             time_stats.stop('ea_generate verify eval')
             time_stats.push('#new tokens per iteration', accept_length.item() + 1)
