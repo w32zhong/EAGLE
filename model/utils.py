@@ -376,18 +376,19 @@ def evaluate_posterior(
         # that is why our accept_length will need to add 1, as there is a guranteed accepted token.
 
         # get acceptance rate by depth?
-        if False:
-            valid_paths = (-1 != retrieve_indices[:,1:])
-            general_accepted = posterior_mask[valid_paths].sum()
-            general_guesses = valid_paths.sum()
-            time_stats.push('depth-all accepted', general_accepted.item())
-            time_stats.push('depth-all total', general_guesses.item())
+        if True:
+            indices = retrieve_indices[:,1:]
+            general_accepted = len(set(indices[posterior_mask==1].tolist()))
+            total_guesses = tree_candidates.shape[-1] - 1
+            time_stats.push('depth-all accepted', general_accepted)
+            time_stats.push('depth-all total', total_guesses)
             for depth in range(posterior_mask.shape[1]):
-                valid_paths_at_detph = valid_paths[:,depth]
-                depth_accepted = posterior_mask[:,depth][valid_paths_at_detph].sum()
-                depth_guesses = valid_paths_at_detph.sum()
-                time_stats.push(f'depth-{depth} accepted', depth_accepted.item())
-                time_stats.push(f'depth-{depth} total', depth_guesses.item())
+                depth_indices = indices[:, depth]
+                depth_posterior_mask = posterior_mask[:, depth]
+                depth_accepted = len(set(depth_indices[depth_posterior_mask==1].tolist()))
+                total_guesses = len(set(depth_indices.tolist()) - {-1})
+                time_stats.push(f'depth-{depth} accepted', depth_accepted)
+                time_stats.push(f'depth-{depth} total', total_guesses)
 
         # perform left to right cumprod, and then sum to get the number of left ones
         candidates_accept_length = (torch.cumprod(posterior_mask, dim=1)).sum(dim=1) # torch.Size([15])
