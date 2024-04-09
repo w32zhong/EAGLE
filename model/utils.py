@@ -378,17 +378,32 @@ def evaluate_posterior(
         # get acceptance rate by depth?
         if True:
             indices = retrieve_indices[:,1:]
-            general_accepted = len(set(indices[posterior_mask==1].tolist()))
-            total_guesses = tree_candidates.shape[-1] - 1
+            mask = torch.cumprod(posterior_mask, dim=1)
+            mask[indices == -1] = -1
+            for i, row in enumerate(mask):
+                for j in range(len(row)):
+                    if row[j] == 0:
+                        mask[i][j] = 2 # 0/2 means failure, 1 means success.
+                        break
+                    elif row[j] == -1: # -1 means empty
+                        break
+
+            general_accepted = len(set(indices[mask==1].tolist()))
+            general_guesses = len(set(indices[
+                (mask == 1).logical_or(mask == 2)
+            ].tolist()))
             time_stats.push('depth-all accepted', general_accepted)
-            time_stats.push('depth-all total', total_guesses)
+            time_stats.push('depth-all total', general_guesses)
+
             for depth in range(posterior_mask.shape[1]):
                 depth_indices = indices[:, depth]
-                depth_posterior_mask = posterior_mask[:, depth]
-                depth_accepted = len(set(depth_indices[depth_posterior_mask==1].tolist()))
-                total_guesses = len(set(depth_indices.tolist()) - {-1})
+                depth_mask = mask[:, depth]
+                depth_accepted = len(set(depth_indices[depth_mask==1].tolist()))
+                depth_guesses = len(set(depth_indices[
+                    (depth_mask == 1).logical_or(depth_mask == 2)
+                ].tolist()))
                 time_stats.push(f'depth-{depth} accepted', depth_accepted)
-                time_stats.push(f'depth-{depth} total', total_guesses)
+                time_stats.push(f'depth-{depth} total', depth_guesses)
 
         # perform left to right cumprod, and then sum to get the number of left ones
         candidates_accept_length = (torch.cumprod(posterior_mask, dim=1)).sum(dim=1) # torch.Size([15])
