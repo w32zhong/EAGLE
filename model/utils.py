@@ -376,7 +376,7 @@ def evaluate_posterior(
         # that is why our accept_length will need to add 1, as there is a guranteed accepted token.
 
         # get acceptance rate by depth?
-        if True:
+        if False:
             indices = retrieve_indices[:,1:]
             mask = torch.cumprod(posterior_mask, dim=1)
             mask[indices == -1] = -1

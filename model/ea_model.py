@@ -415,10 +415,15 @@ class EaModel(nn.Module):
 
             if self.tokenizer.eos_token_id in input_ids[0, input_len:].tolist():
                 print(time_stats.report())
+                time_stats.save('stats.json')
                 break
             if new_token > 1024:
+                print(time_stats.report())
+                time_stats.save('stats.json')
                 break
             if input_ids.shape[1] > 1960:
+                print(time_stats.report())
+                time_stats.save('stats.json')
                 break
 
     @torch.no_grad()
