@@ -121,6 +121,8 @@ class EaModel(nn.Module):
     ):
         with torch.inference_mode():
             # Pass input through the base model
+            assert attention_mask is None
+            #print(past_key_values[0][0].shape, past_key_values[0][0].data.device)
             outputs = self.base_model.model(
                 input_ids=input_ids,
                 attention_mask=attention_mask,

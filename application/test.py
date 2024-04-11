@@ -4,6 +4,8 @@ sys.path.insert(0, '.')
 import time
 import torch
 from model.ea_model import EaModel
+import transformers
+print(transformers.__path__)
 
 model = EaModel.from_pretrained(
     base_model_path='NousResearch/Llama-2-7b-chat-hf',
