@@ -1032,8 +1032,6 @@ class LlamaModel(LlamaPreTrainedModel):
 
         time_stats.reset()
         for idx, decoder_layer in enumerate(self.layers):
-            # if idx==16:
-            #     print(idx)
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
 
@@ -1077,8 +1075,7 @@ class LlamaModel(LlamaPreTrainedModel):
             if output_attentions:
                 all_self_attns += (layer_outputs[1],)
 
-        #print(attention_mask.shape)
-        #print(time_stats.report())
+        #print(attention_mask.shape, time_stats.report())
         hidden_states = self.norm(hidden_states)
 
         # add hidden states from the last decoder layer
