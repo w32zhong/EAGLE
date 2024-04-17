@@ -271,7 +271,7 @@ class EaModel(nn.Module):
             temperature=0.0,
             top_p=0.0,
             top_k=0.0,
-            max_steps=512,
+            max_length=512,
             tree_choices=mc_sim_7b_63,
 
     ):
@@ -347,7 +347,7 @@ class EaModel(nn.Module):
 
         time_stats.stop('ea_generate init')
 
-        for idx in range(max_steps):
+        for idx in range(max_length):
             time_stats.start('ea_generate iteration')
             candidates, cart_candidates_prob, tree_candidates = generate_candidates(
                 tree_logits,
@@ -419,11 +419,7 @@ class EaModel(nn.Module):
                 print(time_stats.report())
                 time_stats.save('stats.json')
                 break
-            if new_token > 1024:
-                print(time_stats.report())
-                time_stats.save('stats.json')
-                break
-            if input_ids.shape[1] > 1960:
+            if input_ids.shape[1] > max_length:
                 print(time_stats.report())
                 time_stats.save('stats.json')
                 break
