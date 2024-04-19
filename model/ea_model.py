@@ -419,7 +419,7 @@ class EaModel(nn.Module):
                 print(time_stats.report())
                 #time_stats.save('stats.json')
                 break
-            if input_ids.shape[1] > max_length:
+            if input_ids.shape[1] >= max_length:
                 print(time_stats.report())
                 #time_stats.save('stats.json')
                 break
