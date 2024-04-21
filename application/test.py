@@ -16,8 +16,9 @@ model = EaModel.from_pretrained(
 )
 model.eval()
 
-prompt = '[INST] tell me a few interesting facts about the sun and the moon. [/INST]'
+prompt = '[INST] tell me something interesting about the solar eclipse in April 2024. [/INST]'
 input_ids = model.tokenizer([prompt], return_tensors="pt").input_ids
+input_ids = input_ids.to('cuda:0')
 past_len = input_ids.shape[1]
 print(prompt)
 start_time = time.time()
