@@ -1,5 +1,4 @@
 transformers==4.35
-datasets==2.18
 accelerate
 fschat
 gradio

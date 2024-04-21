@@ -4,6 +4,7 @@ ADD ./LLM-common-eval/requirements.txt r1.txt
 RUN pip install -r r1.txt
 ADD ./eagle/requirements.txt r2.txt
 RUN pip install -r r2.txt
+RUN pip install datasets==2.18
 # setup the shell
 ADD . s3d
 WORKDIR /workspace/s3d

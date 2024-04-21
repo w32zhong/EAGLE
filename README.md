@@ -62,6 +62,7 @@ _Inference is conducted on RTX 3090 GPUs at fp16 precision using the Vicuna 33B 
 
 ```bash
 pip install -r requirements.txt
+pip install datasets==2.18
 ```
 
 ## EAGLE Weights
