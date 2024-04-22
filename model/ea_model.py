@@ -17,7 +17,6 @@ from .configs import EConfig
 from huggingface_hub import hf_hub_download
 
 from .time_stats import TimeStats
-time_stats = TimeStats()
 
 
 class EaModel(nn.Module):
@@ -275,6 +274,7 @@ class EaModel(nn.Module):
             tree_choices=mc_sim_7b_63,
 
     ):
+        time_stats = TimeStats()
         time_stats.start('ea_generate init')
 
         if temperature > 1e-5:
@@ -366,6 +366,11 @@ class EaModel(nn.Module):
             # verify-forward!
             # initialize_tree(init=False, output_orig=True)
             # which returns (outputs, orig, hidden_states)
+
+            cur_len, past_len = tree_candidates.shape[-1], past_key_values[0][0].current_length
+            time_stats.push('cur_len', cur_len)
+            time_stats.push('past_len', past_len.item())
+
             time_stats.start('ea_generate verify forward')
             logits, hidden_state_new, outputs = tree_decoding(
                 self,
@@ -417,12 +422,15 @@ class EaModel(nn.Module):
 
             if self.tokenizer.eos_token_id in input_ids[0, input_len:].tolist():
                 print(time_stats.report())
-                #time_stats.save('stats.json')
+                self.model_stats = time_stats._hist
                 break
             if input_ids.shape[1] >= max_length:
                 print(time_stats.report())
-                #time_stats.save('stats.json')
+                self.model_stats = time_stats._hist
                 break
+
+    def lce_model_stats(self):
+        return self.model_stats
 
     @torch.no_grad()
     def naive_generate(

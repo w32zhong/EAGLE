@@ -41,7 +41,3 @@ class TimeStats():
             }
             for k in self._hist.keys()
         }, indent=2)
-
-    def save(self, path):
-        with open(path, 'w') as fh:
-            json.dump(self._hist, fh)
