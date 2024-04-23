@@ -8,7 +8,7 @@ from .modeling_llama_kv import LlamaForCausalLM as KVLlamaForCausalLM
 #from .modeling_Mixtral_kv import MixtralForCausalLM as KVMixtralForCausalLM
 from .utils import *
 from .kv_cache import initialize_past_key_values
-from .choices import mc_sim_7b_63
+from .choices import *
 from transformers import AutoTokenizer
 import os
 from huggingface_hub import hf_hub_download
@@ -271,7 +271,10 @@ class EaModel(nn.Module):
             top_p=0.0,
             top_k=0.0,
             max_length=512,
-            tree_choices=mc_sim_7b_63,
+            #tree_choices=mc_sim_d1, # 11
+            #tree_choices=mc_sim_d2, # 14
+            #tree_choices=mc_sim_d3, # 16
+            tree_choices=mc_sim_7b_63, # 16
 
     ):
         time_stats = TimeStats()
