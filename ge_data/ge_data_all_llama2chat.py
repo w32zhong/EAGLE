@@ -159,27 +159,8 @@ def build_dataset_rank(
 bigtokenizer = AutoTokenizer.from_pretrained(bigname,use_fast=False)
 ds = build_dataset_rank(bigtokenizer)
 print(ds)
-# quantization_config = BitsAndBytesConfig(
-#         load_in_4bit=True,
-#         bnb_4bit_compute_dtype=torch.bfloat16,
-#         bnb_4bit_use_double_quant=True,
-#         bnb_4bit_quant_type="nf4",
-#     )
-# bigmodel = AutoModelForCausalLM.from_pretrained(bigname, load_in_4bit=True, device_map={"": 0}, )
-# smallmodel = AutoModelForCausalLM.from_pretrained(smallname, load_in_4bit=True, device_map={"": 1}, )
-bigmodel = AutoModelForCausalLM.from_pretrained(bigname,  device_map="auto",torch_dtype=torch.float16)
-#bigmodel = AutoModelForCausalLM.from_pretrained(bigname,  device_map="auto",load_in_8bit=True)
+bigmodel = AutoModelForCausalLM.from_pretrained(bigname, device_map="auto", load_in_8bit=True)
 bigmodel.eval()
-
-
-
-
-
-
-
-
-
-
 
 @torch.no_grad()
 def ge(data):
@@ -211,5 +192,3 @@ for id,data in enumerate(ds):
         print("")
     outdata = ge(data)
     writedata(outdir,outdata)
-
-

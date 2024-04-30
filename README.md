@@ -177,7 +177,8 @@ print(output)
 You can run the following command to generate the training data.
 ```bash
 cd ge_data/
-python allocation.py --outdir ../data/
+# Instead of: python allocation.py --outdir ../data/
+python ge_data_all_llama2chat.py --start=0 --end=20000 --outdir ../data
 ```
 ### Train the Auto-regression Head
 ```bash
