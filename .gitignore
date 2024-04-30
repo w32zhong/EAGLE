@@ -1,6 +1,7 @@
 *.swp
 tags
 stats.json
+data/1/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
