@@ -177,8 +177,7 @@ print(output)
 You can run the following command to generate the training data.
 ```bash
 cd ge_data/
-mkdir -p ../data/train/
-python allocation.py --outdir ../data/train/
+python allocation.py --outdir ../data/
 ```
 ### Train the Auto-regression Head
 ```bash
