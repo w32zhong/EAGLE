@@ -165,6 +165,7 @@ bigmodel.eval()
 @torch.no_grad()
 def ge(data):
     input_ids=data["input_ids"]
+    input_ids[input_ids >= bigtokenizer.vocab_size] = 0
     outs_big = bigmodel(input_ids.cuda(), output_hidden_states=True)
     hidden_state_big = outs_big.hidden_states[-1]
     max_prob_tokens_big = torch.argmax(outs_big.logits, dim=-1)
