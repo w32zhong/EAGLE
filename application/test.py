@@ -10,6 +10,7 @@ print(transformers.__path__)
 model = EaModel.from_pretrained(
     base_model_path='NousResearch/Llama-2-7b-chat-hf',
     ea_model_path='yuhuili/EAGLE-llama2-chat-7B',
+    #ea_model_path='w32zhong/s3d-EAGLE-retrain-20K',
     torch_dtype=torch.float16,
     load_in_8bit=True,
     device_map="cuda:0"
