@@ -2,6 +2,7 @@
 tags
 stats.json
 data/1/
+wandb/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

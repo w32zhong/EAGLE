@@ -4,8 +4,8 @@ parser = argparse.ArgumentParser(description='sp')
 parser.add_argument('--basepath', type=str, default='/home/lyh/weights/hf/vicuna_v13/7B/')
 parser.add_argument('--configpath', type=str, default="config.json")
 parser.add_argument('--lr', type=float, default=3e-5)
-parser.add_argument('--bs', type=int, default=4)
-parser.add_argument('--gradient-accumulation-steps', type=int, default=1)
+parser.add_argument('--bs', type=int, default=2)
+parser.add_argument('--gradient-accumulation-steps', type=int, default=8)
 parser.add_argument('--tmpdir', type=str, default='0')
 parser.add_argument('--outdir', type=str, default='0')
 parser.add_argument('--cpdir', type=str, default='0')
@@ -17,10 +17,9 @@ train_config = {
     "gradient_accumulation_steps": args.gradient_accumulation_steps,
     "datapath": f"{args.tmpdir}",
     "is_warmup": True,
-    "num_epochs": 20,
+    "num_epochs": 1,
     # Depending on your data and model size, the larger the model, the higher the sample efficiency. We recommend setting it between 20-40.
-    "num_warmup_steps": 2000,
-    "total_steps": 800000,
+    "num_warmup_steps": 50,
     "p_w": 0.1,
     "v_w": 1.0,
     "head_w": 0.1,
@@ -37,8 +36,7 @@ train_config = {
     "config_path": args.configpath,
     "b1": 0.9,
     "b2": 0.95,
-    "grad_clip": 0.5,
-    "save_freq": 5
+    "grad_clip": 0.5
 }
 import json
 from safetensors import safe_open
@@ -54,6 +52,8 @@ from accelerate.utils import set_seed
 set_seed(0)
 accelerator = Accelerator(mixed_precision='bf16',
                           gradient_accumulation_steps=train_config["gradient_accumulation_steps"])
+import sys
+sys.path.insert(0, '..')
 from model.cnets import Model
 from model.configs import EConfig
 from typing import Any, Dict, List
@@ -63,12 +63,11 @@ from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
 # import accelerate
 import numpy as np
-from transformers import get_linear_schedule_with_warmup, AutoConfig
+from transformers import get_constant_schedule_with_warmup, AutoConfig
 
 if accelerator.is_main_process:
     import wandb
-
-    wandb.init(project="ess", entity="yuhui-li", config=train_config)
+    wandb.init(project="s3d", name='EAGLE', config=train_config)
 
 baseconfig = AutoConfig.from_pretrained(args.basepath)
 
@@ -326,13 +325,10 @@ optimizer = optim.AdamW(model.parameters(), lr=train_config["lr"], betas=(train_
 
 num_epochs = train_config["num_epochs"]
 num_warmup_steps = train_config["num_warmup_steps"]
-total_steps = train_config["total_steps"]
 is_warmup = train_config["is_warmup"]
 
 if is_warmup:
-    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=num_warmup_steps,
-                                                num_training_steps=total_steps)
-
+    scheduler = get_constant_schedule_with_warmup(optimizer, num_warmup_steps=num_warmup_steps)
     model, head, optimizer, train_loader, test_loader, scheduler = accelerator.prepare(
         model, head, optimizer, train_loader, test_loader, scheduler
     )
@@ -342,11 +338,6 @@ else:
     )
 # accelerator.load_state("checkpoints/state_5")
 for epoch in range(num_epochs + 1):
-    top_3acc = [0 for _ in range(3)]
-    correct = 0
-    total = 0
-    epoch_loss = 0
-    num_batches = 0
     model.train()
     for batch_idx, data in enumerate(tqdm(train_loader)):
 
@@ -372,113 +363,10 @@ for epoch in range(num_epochs + 1):
             if is_warmup:
                 scheduler.step()
 
-        
-
-        with torch.no_grad():
-            _, predicted = torch.max(out_head, 2)
-            _, target = torch.max(target_head, 2)
-            ct = loss_mask.sum().item()
-            cc = ((predicted == target) * loss_mask.squeeze()).sum().item()
-            out_head = out_head.view(-1, target_head.shape[-1])[loss_mask.view(-1) == 1]
-            target = target.view(-1)[loss_mask.view(-1) == 1]
-            topkacc = top_accuracy(out_head, target, (1, 2, 3))
-            for top_i in range(len(topkacc)):
-                top_3acc[top_i] += topkacc[top_i]
-            total += ct
-            correct += cc
-        if accelerator.is_main_process and ct != 0:
+        if accelerator.is_main_process:
             logdict = {"train/lr": optimizer.optimizer.param_groups[0]["lr"], "train/vloss": vloss.item(),
-                       "train/ploss": ploss.item(), "train/loss": loss.item(), "train/acc": cc / ct}
-            for id, i in enumerate(top_3acc):
-                logdict[f'train/top_{id + 1}_acc'] = topkacc[id].item() / ct
+                       "train/ploss": ploss.item(), "train/loss": loss.item()}
+            print(logdict)
             wandb.log(logdict)
-            # for id,i in enumerate(top_3acc):
-            #     wandb.log({f'train/top_{id+1}_acc':topkacc[id].item()/ct})
 
         del ploss, vloss
-        epoch_loss += loss.item()
-        num_batches += 1
-
-    correct, total = torch.tensor(correct).cuda(), torch.tensor(total).cuda()
-    correct, total = accelerator.gather_for_metrics((correct, total))
-    correct, total = correct.sum().item(), total.sum().item()
-    epoch_loss /= num_batches
-    top_3acc = accelerator.gather_for_metrics(top_3acc)
-    if accelerator.is_local_main_process:
-        for id, i in enumerate(top_3acc):
-            wandb.log({f'train/epochtop_{id + 1}_acc': i.sum().item() / total})
-    if accelerator.is_local_main_process:
-        print('Epoch [{}/{}], Loss: {:.4f}'.format(epoch + 1, num_epochs, epoch_loss))
-        print('Train Accuracy: {:.2f}%'.format(100 * correct / total))
-        wandb.log({"train/epochacc": correct / total, "train/epochloss": epoch_loss})
-
-    if (epoch + 1) % train_config["save_freq"]:
-        top_3acc = [0 for _ in range(3)]
-        correct = 0
-        total = 0
-        epoch_loss = 0
-        num_batches = 0
-        model.eval()
-
-        k_acc = [[] for i in range(5)]
-        for batch_idx, data in enumerate(tqdm(test_loader)):
-            with torch.no_grad():
-                if batch_idx < 10:
-                    acces = getkacc(model, data, head, max_length=5)
-                    for i in range(len(acces)):
-                        k_acc[i].append(acces[i])
-                predict = model(data["hidden_states"], input_ids=data["input_ids"],
-                                attention_mask=data["attention_mask"])
-                target_head = head(data["target"])
-                target_p = nn.Softmax(dim=2)(target_head)
-                target_p = target_p.detach()
-                out_head = head(predict)
-                out_logp = nn.LogSoftmax(dim=2)(out_head)
-                loss_mask = data["loss_mask"][:, :, None]
-                plogp = target_p * out_logp
-                ploss = -torch.sum(torch.sum(loss_mask * plogp, 2)) / loss_mask.sum()
-                vloss = criterion(predict, data["target"])
-                vloss = torch.sum(torch.mean(loss_mask * vloss, 2)) / loss_mask.sum()
-                loss = train_config["v_w"] * vloss + train_config["p_w"] * ploss
-                _, predicted = torch.max(out_head, 2)
-                _, target = torch.max(target_head, 2)
-                ct = loss_mask.sum().item()
-                cc = ((predicted == target) * loss_mask.squeeze()).sum().item()
-                out_head = out_head.view(-1, target_head.shape[-1])[loss_mask.view(-1) == 1]
-                target = target.view(-1)[loss_mask.view(-1) == 1]
-                topkacc = top_accuracy(out_head, target, (1, 2, 3))
-                for top_i in range(len(topkacc)):
-                    top_3acc[top_i] += topkacc[top_i]
-                total += ct
-                correct += cc
-            epoch_loss += loss.item()
-            num_batches += 1
-
-        mean_acces = []
-        for id, i in enumerate(k_acc):
-            mean_acc = np.array(i).mean()
-            mean_acc = torch.tensor(mean_acc).cuda()
-            mean_acces.append(mean_acc)
-
-        mean_acces = accelerator.gather_for_metrics(mean_acces)
-        if accelerator.is_local_main_process:
-            for id, i in enumerate(mean_acces):
-                mean_acc = i.mean().item()
-                wandb.log({f"test/{id}_acc": mean_acc})
-
-        correct, total = torch.tensor(correct).cuda(), torch.tensor(total).cuda()
-        correct, total = accelerator.gather_for_metrics((correct, total))
-        correct, total = correct.sum().item(), total.sum().item()
-        top_3acc = accelerator.gather_for_metrics(top_3acc)
-        if accelerator.is_local_main_process:
-            for id, i in enumerate(top_3acc):
-                wandb.log({f'test/top_{id + 1}_acc': i.sum().item() / total})
-        epoch_loss /= num_batches
-        if accelerator.is_local_main_process:
-            print('Test Epoch [{}/{}], Loss: {:.4f}'.format(epoch + 1, num_epochs, epoch_loss))
-            print('Test Accuracy: {:.2f}%'.format(100 * correct / total))
-            wandb.log({"test/epochacc": correct / total, "test/epochloss": epoch_loss})
-            # accelerator.save_model(model, f"checkpoints/model_{epoch}")
-            # accelerator.save_state(output_dir=f"{args.outdir}/state_{epoch}")
-            # os.system(f"cp -r {args.outdir} {args.cpdir}")
-            accelerator.save_state(output_dir=f"{args.cpdir}/state_{epoch}")

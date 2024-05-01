@@ -183,8 +183,7 @@ python ge_data_all_llama2chat.py --start=0 --end=20000 --outdir ../data
 ### Train the Auto-regression Head
 ```bash
 cd train
-accelerate launch --mixed_precision=bf16 main.py --tmpdir [path of data]\
---cpdir [path of checkpoints]
+accelerate launch --mixed_precision=bf16 main.py --tmpdir ../data/prepared_train_data/ --cpdir . --configpath ./llama_2_chat_7B_config.json --basepath ~/.cache/huggingface/hub/models--NousResearch--Llama-2-7b-chat-hf/snapshots/37892f30c23786c0d5367d80481fa0d9fba93cf8/ --gradient-accumulation-steps 16 --bs 2
 ```
 ## Evaluation
 You can test the speed of EAGLE on MT-bench using the following command.
