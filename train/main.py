@@ -337,6 +337,8 @@ else:
         model, head, optimizer, train_loader, test_loader
     )
 # accelerator.load_state("checkpoints/state_5")
+if accelerator.is_local_main_process:
+    accelerator.save_state(output_dir=f"{args.cpdir}/pretrain_state")
 for epoch in range(num_epochs + 1):
     model.train()
     for batch_idx, data in enumerate(tqdm(train_loader)):
@@ -370,3 +372,5 @@ for epoch in range(num_epochs + 1):
             wandb.log(logdict)
 
         del ploss, vloss
+if accelerator.is_local_main_process:
+    accelerator.save_state(output_dir=f"{args.cpdir}/state")
