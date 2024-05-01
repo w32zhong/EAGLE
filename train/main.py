@@ -17,7 +17,7 @@ train_config = {
     "gradient_accumulation_steps": args.gradient_accumulation_steps,
     "datapath": f"{args.tmpdir}",
     "is_warmup": True,
-    "num_epochs": 1,
+    "num_epochs": 0,
     # Depending on your data and model size, the larger the model, the higher the sample efficiency. We recommend setting it between 20-40.
     "num_warmup_steps": 50,
     "p_w": 0.1,
@@ -339,7 +339,8 @@ else:
 # accelerator.load_state("checkpoints/state_5")
 if accelerator.is_local_main_process:
     accelerator.save_state(output_dir=f"{args.cpdir}/pretrain_state")
-for epoch in range(num_epochs + 1):
+
+for epoch in [0]:
     model.train()
     for batch_idx, data in enumerate(tqdm(train_loader)):
 
