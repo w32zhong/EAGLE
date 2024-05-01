@@ -338,6 +338,7 @@ else:
     )
 # accelerator.load_state("checkpoints/state_5")
 if accelerator.is_local_main_process:
+    accelerator.save_model(model, f"checkpoints/pretrain_model")
     accelerator.save_state(output_dir=f"{args.cpdir}/pretrain_state")
 
 for epoch in [0]:
@@ -374,4 +375,5 @@ for epoch in [0]:
 
         del ploss, vloss
 if accelerator.is_local_main_process:
+    accelerator.save_model(model, f"checkpoints/model")
     accelerator.save_state(output_dir=f"{args.cpdir}/state")
