@@ -34,5 +34,5 @@ for output_ids in model.ea_generate(input_ids, max_length=512):
 print()
 
 time_delta = time.time() - start_time
-out_tokens = len(decode_ids)
+cnt_tokens = len(decode_ids)
 print('e2e speed:', time_delta, cnt_tokens, cnt_tokens / time_delta)
