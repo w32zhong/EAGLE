@@ -282,7 +282,7 @@ class EaModel(nn.Module):
             #tree_choices=mc_sim_d2, # 14
             #tree_choices=mc_sim_d3, # 16
             tree_choices=mc_sim_7b_63, # 16
-
+            profile_acceptance_rate=False
     ):
         time_stats = TimeStats()
         time_stats.start('ea_generate init')
@@ -398,7 +398,8 @@ class EaModel(nn.Module):
             best_candidate, accept_length, sample_p = evaluate_posterior(
                 logits, candidates, logits_processor, cart_candidates_prob, tree_logits[2], tree_buffers["p_indices"],
                 tree_candidates, tree_buffers["b_indices"],
-                time_stats, tree_buffers["retrieve_indices"]
+                time_stats, tree_buffers["retrieve_indices"],
+                profile_acceptance_rate=profile_acceptance_rate
             )
             time_stats.stop('ea_generate verify eval')
             time_stats.push('#new tokens per iteration', accept_length.item() + 1)

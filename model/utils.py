@@ -328,7 +328,7 @@ def tree_decoding(
 
 def evaluate_posterior(
         logits, candidates, logits_processor, cart_candidates_prob, op, p_indices, tree_candidates, b_indices,
-        time_stats, retrieve_indices
+        time_stats, retrieve_indices, profile_acceptance_rate=False
 ):
     """
     Evaluate the posterior probabilities of the candidates based on the provided logits and choose the best candidate.
@@ -376,7 +376,7 @@ def evaluate_posterior(
         # that is why our accept_length will need to add 1, as there is a guranteed accepted token.
 
         # get acceptance rate by depth?
-        if False:
+        if profile_acceptance_rate:
             indices = retrieve_indices[:,1:]
             mask = torch.cumprod(posterior_mask, dim=1)
             mask[indices == -1] = -1
