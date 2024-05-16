@@ -284,6 +284,14 @@ class EaModel(nn.Module):
             tree_choices=mc_sim_7b_63, # 16
             profile_acceptance_rate=False
     ):
+        # n_params = sum(x.numel() for x in self.base_model.parameters())
+        # n_params = n_params / (1_000 * 1_000 * 1_000)
+        # print(n_params)
+        # n_params = sum(x.numel() for x in self.ea_layer.parameters())
+        # n_params = n_params / (1_000 * 1_000 * 1_000)
+        # print(n_params)
+        # ratio: 0.054
+
         time_stats = TimeStats()
         time_stats.start('ea_generate init')
 
