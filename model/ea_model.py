@@ -76,6 +76,10 @@ class EaModel(nn.Module):
             Type="LLaMA",
             base_model_path=None,
             ea_model_path=None,
+            ### newly added ###
+            random_top_layer=False,
+            quantize_top_layer=False,
+            ###################
             **kwargs,
     ):
         #assert Type=="LLaMA" or "Mixtral"
@@ -110,8 +114,42 @@ class EaModel(nn.Module):
 
         if ea_layer_state_dict is None:
             ea_layer_state_dict = torch.load(load_model_path, map_location=base_model.device)
-        model.ea_layer.load_state_dict(ea_layer_state_dict, strict=True)
 
+        import bitsandbytes as bnb
+        #for key in ea_layer_state_dict:
+        #    ea_layer_state_dict[key] = ea_layer_state_dict[key].to(dtype=torch.float16)
+        to_change = []
+        if quantize_top_layer and (kwargs.get('load_in_8bit') or kwargs.get('load_in_4bit')):
+            for key, module in model.ea_layer.named_modules():
+                if not isinstance(module, torch.nn.Linear):
+                    continue
+                if key == 'fc':
+                    continue
+                path_fields = key.split('.')
+                parent_key = '.'.join(path_fields[:-1])
+                child_key = path_fields[-1]
+                parent = model.ea_layer.get_submodule(parent_key)
+                to_change.append((key, module, parent, child_key))
+            #print(model.ea_layer.layers[0].mlp.gate_proj.weight)
+            for key, module, parent, child_key in to_change:
+                delattr(parent, child_key)
+                cls = bnb.nn.Linear4bit
+                if kwargs.get('load_in_8bit'):
+                    cls = bnb.nn.Linear8bitLt
+                elif kwargs.get('load_in_4bit'):
+                    cls = bnb.nn.LinearNF4
+                else:
+                    raise ValueError
+                print(key, cls)
+                setattr(parent, child_key,
+                    cls(module.in_features, module.out_features, bias=False)
+                )
+
+        if random_top_layer:
+            print('loading top-layer state dict ...')
+            model.ea_layer.load_state_dict(ea_layer_state_dict, strict=True)
+
+        model.ea_layer.to(model.ea_layer.fc.weight.device)
         return model
 
     def forward(
