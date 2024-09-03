@@ -10,6 +10,7 @@ from accelerate.utils import BnbQuantizationConfig, load_and_quantize_model
 print(transformers.__path__)
 
 prompt = '[INST] tell me something interesting about the solar eclipse in April 2024. [/INST]'
+max_new_tokens = 100
 
 
 def test_eagle():
@@ -18,7 +19,7 @@ def test_eagle():
         ea_model_path='yuhuili/EAGLE-llama2-chat-7B',
         #ea_model_path='w32zhong/s3d-EAGLE-retrain-20K',
         torch_dtype=torch.float16,
-        random_top_layer=False,
+        random_top_layer=True,
         quantize_top_layer=False,
         #load_in_8bit=True,
         load_in_4bit=True,
@@ -35,6 +36,8 @@ def test_eagle():
             #os.system('clear')
             decode_ids = output_ids[0, past_len:].tolist()
             cnt_tokens += len(decode_ids)
+            if cnt_tokens >= max_new_tokens:
+                break
             past_len = output_ids.shape[1]
             text = model.tokenizer.decode(decode_ids)
             print(text, end=' ', flush=True)
@@ -56,7 +59,7 @@ def test_vanilla():
 
     streamer = TextStreamer(tokenizer)
     with torch.no_grad():
-        output = model.generate(**inputs, streamer=streamer, max_new_tokens=300, use_cache=True)
+        output = model.generate(**inputs, streamer=streamer, max_new_tokens=max_new_tokens, use_cache=True)
     cnt_tokens = output.shape[-1] - inputs.input_ids.shape[-1]
     return cnt_tokens
 
