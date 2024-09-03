@@ -145,7 +145,7 @@ class EaModel(nn.Module):
                     cls(module.in_features, module.out_features, bias=False)
                 )
 
-        if random_top_layer:
+        if not random_top_layer:
             print('loading top-layer state dict ...')
             model.ea_layer.load_state_dict(ea_layer_state_dict, strict=True)
 
