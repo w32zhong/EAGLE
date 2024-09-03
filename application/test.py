@@ -12,8 +12,9 @@ model = EaModel.from_pretrained(
     ea_model_path='yuhuili/EAGLE-llama2-chat-7B',
     #ea_model_path='w32zhong/s3d-EAGLE-retrain-20K',
     torch_dtype=torch.float16,
-    load_in_8bit=True,
-    device_map="cuda:0"
+    #load_in_8bit=True,
+    load_in_4bit=True,
+    device_map="auto"
 )
 model.eval()
 
@@ -34,5 +35,4 @@ for output_ids in model.ea_generate(input_ids, max_length=512):
 print()
 
 time_delta = time.time() - start_time
-cnt_tokens = len(decode_ids)
 print('e2e speed:', time_delta, cnt_tokens, cnt_tokens / time_delta)
