@@ -8,6 +8,9 @@ eagle	16	FALSE	FALSE
 eagle	4	TRUE	FALSE
 eagle	8	TRUE	FALSE
 eagle	16	TRUE	FALSE
+eagle	4	FALSE	TRUE
+eagle	8	FALSE	TRUE
+eagle	16	FALSE	TRUE
 eagle	4	TRUE	TRUE
 eagle	8	TRUE	TRUE
 eagle	16	TRUE	TRUE
