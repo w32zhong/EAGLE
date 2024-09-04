@@ -1,0 +1,13 @@
+method	bits	random_top_layer	quantize_top_layer	time_delta	cnt_tokens	speed
+vanilla	4			4	2.3	1.2
+vanilla	8			8	2.3	1.2
+vanilla	16			16	2.3	1.2
+eagle	4	False	False	4	2.3	1.2
+eagle	8	False	False	8	2.3	1.2
+eagle	16	False	False	16	2.3	1.2
+eagle	4	True	False	4	2.3	1.2
+eagle	8	True	False	8	2.3	1.2
+eagle	16	True	False	16	2.3	1.2
+eagle	4	True	True	4	2.3	1.2
+eagle	8	True	True	8	2.3	1.2
+eagle	16	True	True	16	2.3	1.2

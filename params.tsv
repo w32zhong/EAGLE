@@ -1,0 +1,13 @@
+method	bits	random_top_layer	quantize_top_layer
+vanilla	4		
+vanilla	8		
+vanilla	16		
+eagle	4	FALSE	FALSE
+eagle	8	FALSE	FALSE
+eagle	16	FALSE	FALSE
+eagle	4	TRUE	FALSE
+eagle	8	TRUE	FALSE
+eagle	16	TRUE	FALSE
+eagle	4	TRUE	TRUE
+eagle	8	TRUE	TRUE
+eagle	16	TRUE	TRUE
