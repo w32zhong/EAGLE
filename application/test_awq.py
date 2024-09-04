@@ -10,16 +10,16 @@ model = EaModel.from_pretrained(
     ea_model_path='yuhuili/EAGLE-llama2-chat-7B',
     torch_dtype=torch.float16,
 )
-
 tokenizer = model.tokenizer
-
+layers = model.base_model.model.layers + model.ea_layer.layers
 q_config = {
     "zero_point": True,
     "q_group_size": 128,
 }
 
-run_awq(model, tokenizer, 4, q_config,
+model.base_model.model.embed_tokens.to('cuda')
+pre_quant.run_awq(model, tokenizer, 4, q_config,
     n_samples=512, seqlen=512,
     auto_scale=True, mse_range=True,
-    calib_data="pileval",
+    layers=layers, calib_data="pileval",
 )
