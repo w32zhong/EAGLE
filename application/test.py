@@ -10,7 +10,7 @@ from accelerate.utils import BnbQuantizationConfig, load_and_quantize_model
 print(transformers.__path__)
 
 prompt = '[INST] tell me something interesting about the solar eclipse in April 2024. [/INST]'
-max_new_tokens = 256
+max_length = 256
 
 
 def test_eagle(bits, random_top_layer=False, quantize_top_layer=False):
@@ -39,12 +39,10 @@ def test_eagle(bits, random_top_layer=False, quantize_top_layer=False):
     input_ids = input_ids.to('cuda:0')
     past_len = input_ids.shape[1]
     with torch.no_grad():
-        for output_ids in model.ea_generate(input_ids, max_length=512):
+        for output_ids in model.ea_generate(input_ids, max_length=max_length):
             #os.system('clear')
             decode_ids = output_ids[0, past_len:].tolist()
             cnt_tokens += len(decode_ids)
-            if cnt_tokens >= max_new_tokens:
-                break
             past_len = output_ids.shape[1]
             text = model.tokenizer.decode(decode_ids)
             print(text, end=' ', flush=True)
@@ -71,12 +69,12 @@ def test_vanilla(bits):
 
     streamer = TextStreamer(tokenizer)
     with torch.no_grad():
-        output = model.generate(**inputs, streamer=streamer, max_new_tokens=max_new_tokens, use_cache=True)
+        output = model.generate(**inputs, streamer=streamer, max_length=max_length, use_cache=True)
     cnt_tokens = output.shape[-1] - inputs.input_ids.shape[-1]
     return cnt_tokens
 
 
-def test(method, bits, random_top_layer, quantize_top_layer):
+def test(method, bits, random_top_layer, quantize_top_layer, results={}):
     print(prompt)
     start_time = time.time()
     if method == 'vanilla':
@@ -89,22 +87,30 @@ def test(method, bits, random_top_layer, quantize_top_layer):
     time_delta = time.time() - start_time
     speed = cnt_tokens / time_delta
     print('e2e speed:', time_delta, cnt_tokens, speed)
-    return dict(time_delta=time_delta, cnt_tokens=cnt_tokens, speed=speed)
-
-
-def mock_test(method, bits, random_top_layer, quantize_top_layer):
-    return dict(time_delta=bits, cnt_tokens=2.3, speed=1.2)
+    results.update(dict(time_delta=time_delta, cnt_tokens=cnt_tokens, speed=speed))
 
 
 if __name__ == '__main__':
     import pandas as pd
+    import multiprocessing
+    from colorama import Fore, Back, Style
+    manager = multiprocessing.Manager()
     df_params = pd.read_csv('params.tsv', sep='\t', header=0)
     df_results = []
     for params in df_params.to_dict(orient='records'):
-        results = test(**params)
+        print(Fore.RED, Back.YELLOW, params, Style.RESET_ALL)
+        try:
+            params['results'] = manager.dict()
+            process = multiprocessing.Process(target=test, kwargs=params)
+            process.start()
+            process.join()
+        except:
+            process.terminate()
+            break
+        results = dict(params['results'])
+        print(Fore.RED, Back.YELLOW, results, Style.RESET_ALL, end='\n\n')
         df_results.append(results)
-        print(df_results)
     df_results = pd.DataFrame(df_results)
-    df_output = pd.concat([df_params, df_results], axis=1)
+    df_output = df_params.join(df_results)
     print(df_output)
     df_output.to_csv('output.tsv', sep='\t', index=False)
