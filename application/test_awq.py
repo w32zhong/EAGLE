@@ -20,8 +20,8 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
 
     @staticmethod
     def get_model_layers(model):
-        layers = self.model.base_model.model.layers + model.ea_layer.layers
-        return model.model.layers
+        layers = model.base_model.model.layers + model.ea_layer.layers
+        return layers
 
     @staticmethod
     def get_act_for_scaling(module):
@@ -29,7 +29,8 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
 
     @staticmethod
     def move_embed(model, device: str):
-        model.model.embed_tokens = model.model.embed_tokens.to(device)
+        model.base_model.model.embed_tokens.to(device)
+        model.ea_layer.embed_tokens.to(device)
 
     @staticmethod
     def get_layers_for_scaling(module, input_feat, module_kwargs):
