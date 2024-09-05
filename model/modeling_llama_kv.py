@@ -679,8 +679,9 @@ class LlamaDecoderLayer(nn.Module):
         post_attention_layernorm (LlamaRMSNorm): Layer normalization after self-attention.
     """
 
-    def __init__(self, config: LlamaConfig):
+    def __init__(self, idx, config: LlamaConfig):
         super().__init__()
+        self.idx = idx
         self.hidden_size = config.hidden_size
         self.self_attn = LlamaAttention(config=config)
         self.mlp = LlamaMLP(config)
@@ -887,7 +888,7 @@ class LlamaModel(LlamaPreTrainedModel):
             config.vocab_size, config.hidden_size, self.padding_idx
         )
         self.layers = nn.ModuleList(
-            [LlamaDecoderLayer(config) for _ in range(config.num_hidden_layers)]
+            [LlamaDecoderLayer(i, config) for i in range(config.num_hidden_layers)]
         )
         self.norm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 

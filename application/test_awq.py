@@ -88,6 +88,8 @@ tokenizer, model = EagleAWQForCausalLM.from_pretrained(
     base_model_path='NousResearch/Llama-2-7b-chat-hf',
     ea_model_path='yuhuili/EAGLE-llama2-chat-7B',
     torch_dtype=torch.float16,
+    #low_cpu_mem_usage=True,
+    use_cache=False
 )
 
 quant_config = { "zero_point": True, "q_group_size": 128, "w_bit": 4, "version": "GEMM" }
