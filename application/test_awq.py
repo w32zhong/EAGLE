@@ -36,6 +36,13 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
     def get_layers_for_scaling(module, input_feat, module_kwargs):
         layers = []
 
+        # dict(
+        #     prev_op: the previous operator
+        #     layers: linear weights to concate
+        #     inp: inputs of this operator
+        #     module2inspect: module to call forward(inp, kwargs)
+        # )
+
         # attention input
         layers.append(
             dict(
