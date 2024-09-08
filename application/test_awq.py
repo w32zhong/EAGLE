@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 from awq.models.base import BaseAWQForCausalLM
 from collections import defaultdict
 from functools import partial
@@ -106,22 +107,26 @@ quant_config = { "zero_point": True, "q_group_size": 128, "w_bit": 4, "version":
 #awq_model.quantize(tokenizer, quant_config=quant_config)
 
 class AWQCalibration():
-    def __init__(self, model, target_path):
+    def __init__(self, model, target_path, input_feat):
         self.model = model
         self.target_path = target_path
+        self.input_feat = input_feat
         self.hooks = []
 
     @staticmethod
-    def hook_fn(input_feat, path, module, inputs, kwargs, output):
-        breakpoint()
+    def hook_fn(self, path, module, inputs, kwargs, output):
+        x = inputs[0].detach().cpu()
+        short_path = path.replace(self.target_path, '')
+        self.input_feat[short_path].append(x)
 
     def __enter__(self):
-        input_feat = defaultdict(list)
         for path, module in self.model.named_modules():
-            if path == self.target_path:
+            if not isinstance(module, nn.Linear):
+                continue
+            if path.startswith(self.target_path):
                 print('[hook]', path)
                 hook = module.register_forward_hook(
-                    partial(self.hook_fn, input_feat, path),
+                    partial(self.hook_fn, self, path),
                     with_kwargs=True
                 )
                 self.hooks.append(hook)
@@ -131,7 +136,8 @@ class AWQCalibration():
             hook.remove()
 
 
-with AWQCalibration(awq_model, 'model.ea_layer.layers.0'), torch.no_grad():
+input_feat = defaultdict(list)
+with AWQCalibration(awq_model, 'model.ea_layer.layers.0.', input_feat), torch.no_grad():
     prompt = '[INST] tell me something interesting about the solar eclipse in April 2024. [/INST]'
     input_ids = tokenizer([prompt], return_tensors="pt").input_ids
     input_ids = input_ids.to('cuda:0')
@@ -145,3 +151,5 @@ with AWQCalibration(awq_model, 'model.ea_layer.layers.0'), torch.no_grad():
         text = tokenizer.decode(decode_ids)
         print(text, end=' ', flush=True)
     print()
+
+breakpoint()
