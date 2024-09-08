@@ -1,5 +1,7 @@
 import torch
 from awq.models.base import BaseAWQForCausalLM
+from collections import defaultdict
+from functools import partial
 
 import sys
 sys.path.insert(0, '.')
@@ -14,13 +16,14 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
         model = EaModel.from_pretrained(**kwargs)
         model.eval()
 
-        return model.tokenizer, self(model, 'llama',
+        return model.tokenizer, model, self(model, 'llama',
             is_quantized=False, config=model.config,
             quant_config=None, processor=None)
 
     @staticmethod
     def get_model_layers(model):
-        layers = model.base_model.model.layers + model.ea_layer.layers
+        #layers = model.base_model.model.layers + model.ea_layer.layers
+        layers = model.ea_layer.layers
         return layers
 
     @staticmethod
@@ -91,13 +94,54 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
         return layers
 
 
-tokenizer, model = EagleAWQForCausalLM.from_pretrained(
+tokenizer, ea_model, awq_model = EagleAWQForCausalLM.from_pretrained(
     base_model_path='NousResearch/Llama-2-7b-chat-hf',
     ea_model_path='yuhuili/EAGLE-llama2-chat-7B',
     torch_dtype=torch.float16,
-    #low_cpu_mem_usage=True,
-    use_cache=False
+    device_map='auto'
 )
+tokenizer = ea_model.tokenizer
 
 quant_config = { "zero_point": True, "q_group_size": 128, "w_bit": 4, "version": "GEMM" }
-model.quantize(tokenizer, quant_config=quant_config)
+#awq_model.quantize(tokenizer, quant_config=quant_config)
+
+class AWQCalibration():
+    def __init__(self, model, target_path):
+        self.model = model
+        self.target_path = target_path
+        self.hooks = []
+
+    @staticmethod
+    def hook_fn(input_feat, path, module, inputs, kwargs, output):
+        breakpoint()
+
+    def __enter__(self):
+        input_feat = defaultdict(list)
+        for path, module in self.model.named_modules():
+            if path == self.target_path:
+                print('[hook]', path)
+                hook = module.register_forward_hook(
+                    partial(self.hook_fn, input_feat, path),
+                    with_kwargs=True
+                )
+                self.hooks.append(hook)
+
+    def __exit__(self, type, value, traceback):
+        for hook in self.hooks:
+            hook.remove()
+
+
+with AWQCalibration(awq_model, 'model.ea_layer.layers.0'), torch.no_grad():
+    prompt = '[INST] tell me something interesting about the solar eclipse in April 2024. [/INST]'
+    input_ids = tokenizer([prompt], return_tensors="pt").input_ids
+    input_ids = input_ids.to('cuda:0')
+    cnt_tokens = 0
+    past_len = input_ids.shape[1]
+    for output_ids in ea_model.ea_generate(input_ids, max_length=128):
+        #os.system('clear')
+        decode_ids = output_ids[0, past_len:].tolist()
+        cnt_tokens += len(decode_ids)
+        past_len = output_ids.shape[1]
+        text = tokenizer.decode(decode_ids)
+        print(text, end=' ', flush=True)
+    print()
