@@ -51,7 +51,7 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
         # attention input
         layers.append(
             dict(
-                prev_op=module.input_layernorm if use_original else None,
+                prev_op=module.input_layernorm if use_original else module.E,
                 layers=[
                     module.self_attn.q_proj,
                     module.self_attn.k_proj,
@@ -103,6 +103,7 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
             for idx, linear_config in enumerate(module_config)
         ]
         apply_scale(layer, scales_list, input_feat_dict=input_feat)
+        breakpoint()
 
 
 tokenizer, ea_model, awq_model = EagleAWQForCausalLM.from_pretrained(
