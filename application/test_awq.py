@@ -7,6 +7,7 @@ from functools import partial
 import sys
 sys.path.insert(0, '.')
 from model.ea_model import EaModel
+use_original = False
 
 class EagleAWQForCausalLM(BaseAWQForCausalLM):
     layer_type = "LlamaDecoderLayer"
@@ -23,8 +24,7 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
 
     @staticmethod
     def get_model_layers(model):
-        #layers = model.base_model.model.layers + model.ea_layer.layers
-        layers = model.ea_layer.layers
+        layers = model.base_model.model.layers + model.ea_layer.layers
         return layers
 
     @staticmethod
@@ -50,7 +50,7 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
         # attention input
         layers.append(
             dict(
-                prev_op=module.input_layernorm,
+                prev_op=module.input_layernorm if use_original else None,
                 layers=[
                     module.self_attn.q_proj,
                     module.self_attn.k_proj,
@@ -94,17 +94,27 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
 
         return layers
 
+    def quantize_layer(self, layer, module_config, quant_config):
+        self.quantize(None, quant_config=quant_config, init_only=True)
+        scales_list = [
+            self.quantizer._search_best_scale(idx, layer, **linear_config)
+            for idx, linear_config in enumerate(module_config)
+        ]
+        breakpoint()
+
 
 tokenizer, ea_model, awq_model = EagleAWQForCausalLM.from_pretrained(
     base_model_path='NousResearch/Llama-2-7b-chat-hf',
     ea_model_path='yuhuili/EAGLE-llama2-chat-7B',
     torch_dtype=torch.float16,
-    device_map='auto'
+    device_map=('auto' if not use_original else None)
 )
 tokenizer = ea_model.tokenizer
-
 quant_config = { "zero_point": True, "q_group_size": 128, "w_bit": 4, "version": "GEMM" }
-#awq_model.quantize(tokenizer, quant_config=quant_config)
+
+if use_original:
+    awq_model.quantize(tokenizer, quant_config=quant_config)
+    quit()
 
 class AWQCalibration():
     def __init__(self, model, target_path, input_feat):
@@ -144,7 +154,6 @@ with AWQCalibration(awq_model, 'model.ea_layer.layers.0.', input_feat), torch.no
     cnt_tokens = 0
     past_len = input_ids.shape[1]
     for output_ids in ea_model.ea_generate(input_ids, max_length=128):
-        #os.system('clear')
         decode_ids = output_ids[0, past_len:].tolist()
         cnt_tokens += len(decode_ids)
         past_len = output_ids.shape[1]
@@ -152,4 +161,7 @@ with AWQCalibration(awq_model, 'model.ea_layer.layers.0.', input_feat), torch.no
         print(text, end=' ', flush=True)
     print()
 
-breakpoint()
+input_feat = {k: torch.cat(v, dim=1) for k, v in input_feat.items()}
+module = ea_model.ea_layer.layers[0]
+module_config = EagleAWQForCausalLM.get_layers_for_scaling(module, input_feat, {})
+awq_model.quantize_layer(module, module_config, quant_config)
