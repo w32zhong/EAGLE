@@ -147,7 +147,7 @@ class EaModel(nn.Module):
 
         if not random_top_layer:
             print('loading top-layer state dict ...')
-            model.ea_layer.load_state_dict(ea_layer_state_dict, strict=True)
+            model.ea_layer.load_state_dict(ea_layer_state_dict, strict=False)
 
         model.ea_layer.to(model.ea_layer.fc.weight.device)
         return model

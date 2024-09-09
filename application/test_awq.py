@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from awq.models.base import BaseAWQForCausalLM
+from awq.quantize.scale import apply_scale, apply_clip
 from collections import defaultdict
 from functools import partial
 
@@ -94,13 +95,14 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
 
         return layers
 
-    def quantize_layer(self, layer, module_config, quant_config):
+    def quantize_layer(self, layer, input_feat, quant_config):
+        module_config = self.get_layers_for_scaling(layer, input_feat, {})
         self.quantize(None, quant_config=quant_config, init_only=True)
         scales_list = [
             self.quantizer._search_best_scale(idx, layer, **linear_config)
             for idx, linear_config in enumerate(module_config)
         ]
-        breakpoint()
+        apply_scale(layer, scales_list, input_feat_dict=input_feat)
 
 
 tokenizer, ea_model, awq_model = EagleAWQForCausalLM.from_pretrained(
@@ -163,5 +165,4 @@ with AWQCalibration(awq_model, 'model.ea_layer.layers.0.', input_feat), torch.no
 
 input_feat = {k: torch.cat(v, dim=1) for k, v in input_feat.items()}
 module = ea_model.ea_layer.layers[0]
-module_config = EagleAWQForCausalLM.get_layers_for_scaling(module, input_feat, {})
-awq_model.quantize_layer(module, module_config, quant_config)
+awq_model.quantize_layer(module, input_feat, quant_config)
