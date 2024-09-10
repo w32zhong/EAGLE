@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from awq.models.base import BaseAWQForCausalLM
 from awq.quantize.scale import apply_scale, apply_clip
+from awq.utils.utils import clear_memory
 from collections import defaultdict
 from functools import partial
 
@@ -103,6 +104,14 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
             for idx, linear_config in enumerate(module_config)
         ]
         apply_scale(layer, scales_list, input_feat_dict=input_feat)
+        clear_memory()
+        named_linears = {
+            path: m for path, m in layer.named_modules()
+            if isinstance(m, nn.Linear)
+        }
+        clip_list = self.quantizer._search_best_clip(
+            layer, named_linears, input_feat
+        )
         breakpoint()
 
 
@@ -129,17 +138,17 @@ class AWQCalibration():
     @staticmethod
     def hook_fn(self, path, module, inputs, kwargs, output):
         x = inputs[0].detach().cpu()
-        short_path = path.replace(self.target_path, '')
-        self.input_feat[short_path].append(x)
+        self.input_feat[path].append(x)
 
     def __enter__(self):
         for path, module in self.model.named_modules():
             if not isinstance(module, nn.Linear):
                 continue
+            short_path = path.replace(self.target_path, '')
             if path.startswith(self.target_path):
                 print('[hook]', path)
                 hook = module.register_forward_hook(
-                    partial(self.hook_fn, self, path),
+                    partial(self.hook_fn, self, short_path),
                     with_kwargs=True
                 )
                 self.hooks.append(hook)
@@ -166,4 +175,5 @@ with AWQCalibration(awq_model, 'model.ea_layer.layers.0.', input_feat), torch.no
 
 input_feat = {k: torch.cat(v, dim=1) for k, v in input_feat.items()}
 module = ea_model.ea_layer.layers[0]
+clear_memory()
 awq_model.quantize_layer(module, input_feat, quant_config)
