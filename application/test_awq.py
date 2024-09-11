@@ -105,6 +105,7 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
         ]
         apply_scale(layer, scales_list, input_feat_dict=input_feat)
         clear_memory()
+
         named_linears = {
             path: m for path, m in layer.named_modules()
             if isinstance(m, nn.Linear)
@@ -112,6 +113,10 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
         clip_list = self.quantizer._search_best_clip(
             layer, named_linears, input_feat
         )
+        apply_clip(layer, clip_list)
+        self.quantizer._apply_quant(layer, named_linears)
+        clear_memory()
+
         breakpoint()
 
 
