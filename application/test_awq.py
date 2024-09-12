@@ -5,6 +5,12 @@ from awq.quantize.scale import apply_scale, apply_clip
 from awq.utils.utils import clear_memory
 from collections import defaultdict
 from functools import partial
+from awq.models._config import AwqConfig
+from awq.modules.linear import (
+    WQLinear_GEMM,
+    WQLinear_GEMV,
+    WQLinear_GEMVFast,
+)
 
 import sys
 sys.path.insert(0, '.')
@@ -23,6 +29,19 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
         return model.tokenizer, model, self(model, 'llama',
             is_quantized=False, config=model.config,
             quant_config=None, processor=None)
+
+
+    def save_quantized(self, model_to_save, save_pth):
+        Q_state_dict = dict()
+        for path, module in model_to_save.named_modules():
+            name = module.__class__.__name__
+            print('saving', path, name)
+            if 'WQLinear' not in name:
+                continue
+            module_state_dict = module.state_dict()
+            for key in module_state_dict:
+                Q_state_dict[path + f".{key}"] = module
+        torch.save(Q_state_dict, save_pth)
 
     @staticmethod
     def get_model_layers(model):
@@ -117,68 +136,156 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
         self.quantizer._apply_quant(layer, named_linears)
         clear_memory()
 
-        breakpoint()
+
+def quantize():
+    tokenizer, ea_model, awq_model = EagleAWQForCausalLM.from_pretrained(
+        base_model_path='NousResearch/Llama-2-7b-chat-hf',
+        ea_model_path='yuhuili/EAGLE-llama2-chat-7B',
+        torch_dtype=torch.float16,
+        device_map=('auto' if not use_original else None)
+    )
+    tokenizer = ea_model.tokenizer
+
+    quant_config = { "zero_point": True, "q_group_size": 128, "w_bit": 4, "version": "GEMM" }
+
+    if use_original:
+        awq_model.quantize(tokenizer, quant_config=quant_config)
+        quit()
+
+    class AWQCalibration():
+        def __init__(self, model, target_path, input_feat):
+            self.model = model
+            self.target_path = target_path
+            self.input_feat = input_feat
+            self.hooks = []
+
+        @staticmethod
+        def hook_fn(self, path, module, inputs, kwargs, output):
+            x = inputs[0].detach().cpu()
+            self.input_feat[path].append(x)
+
+        def __enter__(self):
+            for path, module in self.model.named_modules():
+                if not isinstance(module, nn.Linear):
+                    continue
+                short_path = path.replace(self.target_path, '')
+                if path.startswith(self.target_path):
+                    print('[hook]', path)
+                    hook = module.register_forward_hook(
+                        partial(self.hook_fn, self, short_path),
+                        with_kwargs=True
+                    )
+                    self.hooks.append(hook)
+
+        def __exit__(self, type, value, traceback):
+            for hook in self.hooks:
+                hook.remove()
 
 
-tokenizer, ea_model, awq_model = EagleAWQForCausalLM.from_pretrained(
-    base_model_path='NousResearch/Llama-2-7b-chat-hf',
-    ea_model_path='yuhuili/EAGLE-llama2-chat-7B',
-    torch_dtype=torch.float16,
-    device_map=('auto' if not use_original else None)
-)
-tokenizer = ea_model.tokenizer
-quant_config = { "zero_point": True, "q_group_size": 128, "w_bit": 4, "version": "GEMM" }
+    input_feat = defaultdict(list)
+    with AWQCalibration(awq_model, 'model.ea_layer.layers.0.', input_feat), torch.no_grad():
+        prompt = '[INST] tell me something interesting about the solar eclipse in April 2024. [/INST]'
+        input_ids = tokenizer([prompt], return_tensors="pt").input_ids
+        input_ids = input_ids.to('cuda:0')
+        cnt_tokens = 0
+        past_len = input_ids.shape[1]
+        for output_ids in ea_model.ea_generate(input_ids, max_length=128):
+            decode_ids = output_ids[0, past_len:].tolist()
+            cnt_tokens += len(decode_ids)
+            past_len = output_ids.shape[1]
+            text = tokenizer.decode(decode_ids)
+            print(text, end=' ', flush=True)
+        print()
 
-if use_original:
-    awq_model.quantize(tokenizer, quant_config=quant_config)
-    quit()
+    input_feat = {k: torch.cat(v, dim=1) for k, v in input_feat.items()}
+    module = ea_model.ea_layer.layers[0]
+    clear_memory()
+    awq_model.quantize_layer(module, input_feat, quant_config)
+    awq_model.save_quantized(ea_model, 'save.pth')
+    del awq_model, ea_model
+    clear_memory()
 
-class AWQCalibration():
-    def __init__(self, model, target_path, input_feat):
-        self.model = model
-        self.target_path = target_path
-        self.input_feat = input_feat
-        self.hooks = []
 
-    @staticmethod
-    def hook_fn(self, path, module, inputs, kwargs, output):
-        x = inputs[0].detach().cpu()
-        self.input_feat[path].append(x)
+def load_and_test(pth_path='save.pth'):
+    tokenizer, ea_model, awq_model = EagleAWQForCausalLM.from_pretrained(
+        base_model_path='NousResearch/Llama-2-7b-chat-hf',
+        ea_model_path='yuhuili/EAGLE-llama2-chat-7B',
+        torch_dtype=torch.float16,
+        device_map=('auto' if not use_original else None),
+        ########
+        quantize_top_layer=False,
+        load_in_4bit=True
+    )
+    tokenizer = ea_model.tokenizer
 
-    def __enter__(self):
-        for path, module in self.model.named_modules():
-            if not isinstance(module, nn.Linear):
+    if False:
+        quant_config = { "zero_point": True, "q_group_size": 128, "w_bit": 4, "version": "GEMM" }
+        quant_config = AwqConfig.from_dict(quant_config)
+        Q_state_dict = torch.load(pth_path)
+        to_be_replaced = []
+        for key, module in ea_model.named_modules():
+            def parent(key):
+                path_fields = key.split('.')
+                parent_key = '.'.join(path_fields[:-1])
+                child_key = path_fields[-1]
+                return parent_key, child_key
+            Q_mod_keys = set([parent(key)[0] for key in Q_state_dict.keys()])
+
+            if key not in Q_mod_keys:
                 continue
-            short_path = path.replace(self.target_path, '')
-            if path.startswith(self.target_path):
-                print('[hook]', path)
-                hook = module.register_forward_hook(
-                    partial(self.hook_fn, self, short_path),
-                    with_kwargs=True
-                )
-                self.hooks.append(hook)
 
-    def __exit__(self, type, value, traceback):
-        for hook in self.hooks:
-            hook.remove()
+            version = quant_config.version
+            if version == "gemm":
+                q_linear_module = WQLinear_GEMM
+            elif version == "gemv":
+                q_linear_module = WQLinear_GEMV
+            elif version == "gemv_fast":
+                q_linear_module = WQLinear_GEMVFast
+            else:
+                q_linear_module = None
+
+            q_linear = q_linear_module.from_linear(
+                module, quant_config.w_bit, quant_config.q_group_size, True
+            )
+            for subkey, dst_W in q_linear.named_buffers():
+                state = Q_state_dict[key + '.' + subkey]
+                src_W = getattr(state, subkey)
+                dst_W.copy_(src_W)
+            q_linear.to(next(module.parameters()).device)
+
+            parent_key, child_key = parent(key)
+            p_module = ea_model.get_submodule(parent_key)
+
+            to_be_replaced.append((p_module, child_key, q_linear))
+
+        for p_module, child_key, _ in to_be_replaced:
+            delattr(p_module, child_key)
+        clear_memory()
+        for p_module, child_key, q_linear in to_be_replaced:
+            setattr(p_module, child_key, q_linear)
+
+    #breakpoint()
+    # p ea_model
+    with torch.no_grad():
+        prompt = '[INST] tell me something interesting about the solar eclipse in April 2024. [/INST]'
+        input_ids = tokenizer([prompt], return_tensors="pt").input_ids
+        input_ids = input_ids.to('cuda:0')
+        cnt_tokens = 0
+        past_len = input_ids.shape[1]
+
+        start_time = time.time()
+        for output_ids in ea_model.ea_generate(input_ids, max_length=128):
+            decode_ids = output_ids[0, past_len:].tolist()
+            cnt_tokens += len(decode_ids)
+            past_len = output_ids.shape[1]
+            text = tokenizer.decode(decode_ids)
+            print(text, end=' ', flush=True)
+        print()
+        time_delta = time.time() - start_time
+    speed = cnt_tokens / time_delta
+    print('e2e speed:', time_delta, cnt_tokens, speed)
 
 
-input_feat = defaultdict(list)
-with AWQCalibration(awq_model, 'model.ea_layer.layers.0.', input_feat), torch.no_grad():
-    prompt = '[INST] tell me something interesting about the solar eclipse in April 2024. [/INST]'
-    input_ids = tokenizer([prompt], return_tensors="pt").input_ids
-    input_ids = input_ids.to('cuda:0')
-    cnt_tokens = 0
-    past_len = input_ids.shape[1]
-    for output_ids in ea_model.ea_generate(input_ids, max_length=128):
-        decode_ids = output_ids[0, past_len:].tolist()
-        cnt_tokens += len(decode_ids)
-        past_len = output_ids.shape[1]
-        text = tokenizer.decode(decode_ids)
-        print(text, end=' ', flush=True)
-    print()
-
-input_feat = {k: torch.cat(v, dim=1) for k, v in input_feat.items()}
-module = ea_model.ea_layer.layers[0]
-clear_memory()
-awq_model.quantize_layer(module, input_feat, quant_config)
+if __name__ == '__main__':
+    #quantize()
+    load_and_test()
