@@ -133,7 +133,7 @@ class EaModel(nn.Module):
             #print(model.ea_layer.layers[0].mlp.gate_proj.weight)
             for key, module, parent, child_key in to_change:
                 delattr(parent, child_key)
-                cls = bnb.nn.Linear4bit
+                cls = bnb.nn.LinearNF4 # Linear4bit
                 if kwargs.get('load_in_8bit'):
                     cls = bnb.nn.Linear8bitLt
                 elif kwargs.get('load_in_4bit'):
