@@ -216,10 +216,12 @@ def load_and_test(mode, pth_path='save.pth'):
         kwargs = dict(quantize_top_layer=False, load_in_4bit=True)
     elif mode == 'nf4-toponly':
         kwargs = dict(quantize_top_layer=True)
+    elif mode == 'nf4-awq':
+        kwargs = dict(quantize_top_layer=False, load_in_4bit=True)
     elif mode == 'awq':
-        kwargs = {}
+        pass
     else:
-        assert False
+        raise ValueError
     tokenizer, ea_model, awq_model = EagleAWQForCausalLM.from_pretrained(
         base_model_path='NousResearch/Llama-2-7b-chat-hf',
         ea_model_path='yuhuili/EAGLE-llama2-chat-7B',
@@ -230,7 +232,7 @@ def load_and_test(mode, pth_path='save.pth'):
     )
     tokenizer = ea_model.tokenizer
 
-    if mode == 'awq':
+    if 'awq' in mode:
         quant_config = { "zero_point": True, "q_group_size": 128, "w_bit": 4, "version": "GEMM" }
         quant_config = AwqConfig.from_dict(quant_config)
         Q_state_dict = torch.load(pth_path)
@@ -303,4 +305,5 @@ if __name__ == '__main__':
     #load_and_test('nf4-baseonly') # speed=8.8
     #load_and_test('nf4-toponly') # speed=20.2
     #quantize()
-    load_and_test('awq') # speed=32.87
+    load_and_test('nf4-awq') # 6.7
+    #load_and_test('awq') # speed=32.87
