@@ -1,3 +1,4 @@
+import time
 import torch
 import torch.nn as nn
 from awq.models.base import BaseAWQForCausalLM
@@ -206,19 +207,30 @@ def quantize():
     clear_memory()
 
 
-def load_and_test(pth_path='save.pth'):
+def load_and_test(mode, pth_path='save.pth'):
+    if mode == 'fp16':
+        kwargs = dict(quantize_top_layer=False, load_in_4bit=False)
+    elif mode == 'nf4':
+        kwargs = dict(quantize_top_layer=True, load_in_4bit=True)
+    elif mode == 'nf4-baseonly':
+        kwargs = dict(quantize_top_layer=False, load_in_4bit=True)
+    elif mode == 'nf4-toponly':
+        kwargs = dict(quantize_top_layer=True)
+    elif mode == 'awq':
+        kwargs = {}
+    else:
+        assert False
     tokenizer, ea_model, awq_model = EagleAWQForCausalLM.from_pretrained(
         base_model_path='NousResearch/Llama-2-7b-chat-hf',
         ea_model_path='yuhuili/EAGLE-llama2-chat-7B',
         torch_dtype=torch.float16,
         device_map=('auto' if not use_original else None),
         ########
-        quantize_top_layer=False,
-        load_in_4bit=True
+        **kwargs
     )
     tokenizer = ea_model.tokenizer
 
-    if False:
+    if mode == 'awq':
         quant_config = { "zero_point": True, "q_group_size": 128, "w_bit": 4, "version": "GEMM" }
         quant_config = AwqConfig.from_dict(quant_config)
         Q_state_dict = torch.load(pth_path)
@@ -264,8 +276,7 @@ def load_and_test(pth_path='save.pth'):
         for p_module, child_key, q_linear in to_be_replaced:
             setattr(p_module, child_key, q_linear)
 
-    #breakpoint()
-    # p ea_model
+    print(ea_model)
     with torch.no_grad():
         prompt = '[INST] tell me something interesting about the solar eclipse in April 2024. [/INST]'
         input_ids = tokenizer([prompt], return_tensors="pt").input_ids
@@ -274,7 +285,7 @@ def load_and_test(pth_path='save.pth'):
         past_len = input_ids.shape[1]
 
         start_time = time.time()
-        for output_ids in ea_model.ea_generate(input_ids, max_length=128):
+        for output_ids in ea_model.ea_generate(input_ids, max_length=512): #128
             decode_ids = output_ids[0, past_len:].tolist()
             cnt_tokens += len(decode_ids)
             past_len = output_ids.shape[1]
@@ -287,5 +298,9 @@ def load_and_test(pth_path='save.pth'):
 
 
 if __name__ == '__main__':
+    #load_and_test('fp16') # speed=42.5
+    #load_and_test('nf4') # speed=5.3
+    #load_and_test('nf4-baseonly') # speed=8.8
+    #load_and_test('nf4-toponly') # speed=20.2
     #quantize()
-    load_and_test()
+    load_and_test('awq') # speed=32.87

@@ -119,7 +119,7 @@ class EaModel(nn.Module):
         #for key in ea_layer_state_dict:
         #    ea_layer_state_dict[key] = ea_layer_state_dict[key].to(dtype=torch.float16)
         to_change = []
-        if quantize_top_layer and (kwargs.get('load_in_8bit') or kwargs.get('load_in_4bit')):
+        if quantize_top_layer:
             for key, module in model.ea_layer.named_modules():
                 if not isinstance(module, torch.nn.Linear):
                     continue
@@ -139,7 +139,7 @@ class EaModel(nn.Module):
                 elif kwargs.get('load_in_4bit'):
                     cls = bnb.nn.LinearNF4
                 else:
-                    raise ValueError
+                    pass
                 print(key, cls)
                 setattr(parent, child_key,
                     cls(module.in_features, module.out_features, bias=False)
@@ -148,6 +148,7 @@ class EaModel(nn.Module):
         if not random_top_layer:
             print('loading top-layer state dict ...')
             model.ea_layer.load_state_dict(ea_layer_state_dict, strict=False)
+            print(model.ea_layer)
 
         model.ea_layer.to(model.ea_layer.fc.weight.device)
         return model
