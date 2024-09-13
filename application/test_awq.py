@@ -210,6 +210,7 @@ def quantize(save_dir='save'):
     all_layers = set(all_layers)
 
     for layer_path in all_layers:
+        print('Quantizing:', layer_path)
         layer = awq_model.get_submodule(layer_path)
         layer_input_feat = {
             k.replace(layer_path + '.', ''): v
@@ -218,7 +219,6 @@ def quantize(save_dir='save'):
         }
         awq_model.quantize_layer(layer, layer_input_feat, quant_config)
         clear_memory()
-        breakpoint()
 
     os.makedirs(save_dir, exist_ok=True)
     awq_model.save_quantized(ea_model, f'{save_dir}/save.pth')
