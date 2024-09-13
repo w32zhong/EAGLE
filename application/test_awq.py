@@ -3,6 +3,8 @@ import re
 import time
 import torch
 import torch.nn as nn
+from transformers import AutoTokenizer
+from awq import AutoAWQForCausalLM
 from awq.models.base import BaseAWQForCausalLM
 from awq.quantize.scale import apply_scale, apply_clip
 from awq.utils.utils import clear_memory
@@ -224,6 +226,17 @@ def quantize(save_dir='save'):
     awq_model.save_quantized(ea_model, f'{save_dir}/save.pth')
 
 
+def quantize_vanilla(model_path='NousResearch/Llama-2-7b-chat-hf', save_dir='save'):
+    quant_config = { "zero_point": True, "q_group_size": 128, "w_bit": 4, "version": "GEMM" }
+
+    tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
+    model = AutoAWQForCausalLM.from_pretrained(
+        model_path, device_map="auto", use_cache=False
+    )
+    model.quantize(tokenizer, quant_config=quant_config)
+    model.save_quantized(save_dir)
+
+
 def load_and_test(mode, pth_path='save/save.pth'):
     if mode == 'fp16':
         kwargs = dict(quantize_top_layer=False, load_in_4bit=False)
@@ -331,4 +344,5 @@ if __name__ == '__main__':
     #load_and_test('nf4-awq')           # speed=6.6
     #load_and_test('fp16-awq', 'save/model.ea_layer.layers.0.pth')          # speed=31.2   ***
 
-    load_and_test('awq')
+    #load_and_test('awq')
+    quantize_vanilla()
