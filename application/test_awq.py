@@ -2,6 +2,8 @@ import os
 import re
 import time
 import torch
+import json
+import pickle
 import torch.nn as nn
 from transformers import AutoTokenizer, TextStreamer
 from awq import AutoAWQForCausalLM
@@ -190,20 +192,32 @@ def quantize(save_dir='save'):
         awq_model.quantize(tokenizer, quant_config=quant_config)
         quit()
 
+    with open('application/prompts.json', 'r') as fh:
+        prompts = json.load(fh)
+    calib_questions = [p['prompt_text'] for p in prompts]
+
     input_feat = defaultdict(list)
     with AWQCalibration(awq_model, '', input_feat), torch.no_grad():
-        prompt = '[INST] tell me something interesting about the solar eclipse in April 2024. [/INST]'
-        input_ids = tokenizer([prompt], return_tensors="pt").input_ids
-        input_ids = input_ids.to('cuda:0')
-        cnt_tokens = 0
-        past_len = input_ids.shape[1]
-        for output_ids in ea_model.ea_generate(input_ids, max_length=128):
-            decode_ids = output_ids[0, past_len:].tolist()
-            cnt_tokens += len(decode_ids)
-            past_len = output_ids.shape[1]
-            text = tokenizer.decode(decode_ids)
-            print(text, end=' ', flush=True)
-        print()
+        for prompt in calib_questions:
+            prompt = '[INST] ' + prompt + ' [/INST]'
+            print(prompt)
+            input_ids = tokenizer([prompt], return_tensors="pt").input_ids
+            input_ids = input_ids.to('cuda:0')
+            cnt_tokens = 0
+            past_len = input_ids.shape[1]
+            for output_ids in ea_model.ea_generate(input_ids, max_length=512):
+                decode_ids = output_ids[0, past_len:].tolist()
+                cnt_tokens += len(decode_ids)
+                past_len = output_ids.shape[1]
+                text = tokenizer.decode(decode_ids)
+                print(text, end=' ', flush=True)
+            print()
+    breakpoint()
+
+    # torch.Size([65, 512, 4096])
+    with open(f'{save_dir}/collect.pkl', 'wb') as fh:
+        pickle.dump(input_feat, fh)
+        quit()
     input_feat = {k: torch.cat(v, dim=1) for k, v in input_feat.items()}
     clear_memory()
 
@@ -348,9 +362,9 @@ if __name__ == '__main__':
 
     #load_and_test('nf4-baseonly')      # speed=8.7
     #load_and_test('nf4-toponly')       # speed=19.8   ***
-    #quantize()
+    quantize()
     #load_and_test('nf4-awq')           # speed=6.6
     #load_and_test('fp16-awq', 'save/model.ea_layer.layers.0.pth')          # speed=31.2   ***
 
     #load_and_test('awq')
-    test_vanilla()
+    #test_vanilla()
