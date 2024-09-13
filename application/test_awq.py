@@ -210,6 +210,8 @@ def quantize():
 def load_and_test(mode, pth_path='save.pth'):
     if mode == 'fp16':
         kwargs = dict(quantize_top_layer=False, load_in_4bit=False)
+    elif mode == 'int8':
+        kwargs = dict(quantize_top_layer=True, load_in_8bit=True)
     elif mode == 'nf4':
         kwargs = dict(quantize_top_layer=True, load_in_4bit=True)
     elif mode == 'nf4-baseonly':
@@ -219,7 +221,7 @@ def load_and_test(mode, pth_path='save.pth'):
     elif mode == 'nf4-awq':
         kwargs = dict(quantize_top_layer=False, load_in_4bit=True)
     elif mode == 'awq':
-        pass
+        kwargs = dict()
     else:
         raise ValueError
     tokenizer, ea_model, awq_model = EagleAWQForCausalLM.from_pretrained(
@@ -300,10 +302,13 @@ def load_and_test(mode, pth_path='save.pth'):
 
 
 if __name__ == '__main__':
-    #load_and_test('fp16') # speed=42.5
-    #load_and_test('nf4') # speed=5.3
-    #load_and_test('nf4-baseonly') # speed=8.8
-    #load_and_test('nf4-toponly') # speed=20.2
+                                        # vinilla_speed=15
+    #load_and_test('fp16')              # speed=42.5
+    #load_and_test('int8')              # speed=9.6
+    #load_and_test('nf4')               # speed=5.3
+
+    #load_and_test('nf4-baseonly')      # speed=8.7
+    #load_and_test('nf4-toponly')       # speed=19.8
     #quantize()
-    load_and_test('nf4-awq') # 6.7
-    #load_and_test('awq') # speed=32.87
+    #load_and_test('nf4-awq')           # speed=6.6
+    #load_and_test('awq')               # speed=31.2
