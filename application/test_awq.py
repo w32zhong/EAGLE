@@ -3,7 +3,7 @@ import re
 import time
 import torch
 import torch.nn as nn
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, TextStreamer
 from awq import AutoAWQForCausalLM
 from awq.models.base import BaseAWQForCausalLM
 from awq.quantize.scale import apply_scale, apply_clip
@@ -226,15 +226,23 @@ def quantize(save_dir='save'):
     awq_model.save_quantized(ea_model, f'{save_dir}/save.pth')
 
 
-def quantize_vanilla(model_path='NousResearch/Llama-2-7b-chat-hf', save_dir='save'):
-    quant_config = { "zero_point": True, "q_group_size": 128, "w_bit": 4, "version": "GEMM" }
-
+def test_vanilla(model_path='NousResearch/Llama-2-7b-chat-hf', save_dir='save'):
+    prompt = '[INST] tell me something interesting about the solar eclipse in April 2024. [/INST]'
     tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
-    model = AutoAWQForCausalLM.from_pretrained(
-        model_path, device_map="auto", use_cache=False
-    )
-    model.quantize(tokenizer, quant_config=quant_config)
-    model.save_quantized(save_dir)
+    if save_dir is None: # inference
+        model = AutoAWQForCausalLM.from_quantized('save/', fuse_layers=False)
+        inputs = tokenizer([prompt], return_tensors="pt").to('cuda:0')
+        model.eval()
+        streamer = TextStreamer(tokenizer)
+        with torch.no_grad():
+            output = model.generate(**inputs, streamer=streamer, max_length=128)
+    else:
+        quant_config = { "zero_point": True, "q_group_size": 128, "w_bit": 4, "version": "GEMM" }
+        model = AutoAWQForCausalLM.from_pretrained(
+            model_path, device_map="auto", use_cache=False
+        )
+        model.quantize(tokenizer, quant_config=quant_config)
+        model.save_quantized(save_dir)
 
 
 def load_and_test(mode, pth_path='save/save.pth'):
@@ -345,4 +353,4 @@ if __name__ == '__main__':
     #load_and_test('fp16-awq', 'save/model.ea_layer.layers.0.pth')          # speed=31.2   ***
 
     #load_and_test('awq')
-    quantize_vanilla()
+    test_vanilla()
