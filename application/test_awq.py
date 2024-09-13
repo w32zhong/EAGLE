@@ -1,4 +1,5 @@
 import os
+import re
 import time
 import torch
 import torch.nn as nn
@@ -73,7 +74,7 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
         # attention input
         layers.append(
             dict(
-                prev_op=module.input_layernorm if use_original else module.E,
+                prev_op=module.input_layernorm if hasattr(module, 'input_layernorm') else module.E,
                 layers=[
                     module.self_attn.q_proj,
                     module.self_attn.k_proj,
@@ -142,7 +143,7 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
 class AWQCalibration():
     def __init__(self, model, target_path, input_feat):
         self.model = model
-        self.target_path = target_path + '.'
+        self.target_path = target_path + '.' if target_path else None
         self.input_feat = input_feat
         self.hooks = []
 
@@ -153,10 +154,13 @@ class AWQCalibration():
 
     def __enter__(self):
         for path, module in self.model.named_modules():
-            if not isinstance(module, nn.Linear):
+            if not isinstance(module, nn.Linear) or 'layers' not in path:
                 continue
-            short_path = path.replace(self.target_path, '')
-            if path.startswith(self.target_path):
+            if self.target_path is None:
+                short_path = path
+            else:
+                short_path = path.replace(self.target_path, '')
+            if self.target_path is None or path.startswith(self.target_path):
                 print('[hook]', path)
                 hook = module.register_forward_hook(
                     partial(self.hook_fn, self, short_path),
@@ -169,34 +173,7 @@ class AWQCalibration():
             hook.remove()
 
 
-def quantize_layer(tokenizer, ea_model, awq_model, quant_config,
-    layer='model.ea_layer.layers.0', save_dir='save'):
-    input_feat = defaultdict(list)
-    with AWQCalibration(awq_model, layer, input_feat), torch.no_grad():
-        prompt = '[INST] tell me something interesting about the solar eclipse in April 2024. [/INST]'
-        input_ids = tokenizer([prompt], return_tensors="pt").input_ids
-        input_ids = input_ids.to('cuda:0')
-        cnt_tokens = 0
-        past_len = input_ids.shape[1]
-        for output_ids in ea_model.ea_generate(input_ids, max_length=128):
-            decode_ids = output_ids[0, past_len:].tolist()
-            cnt_tokens += len(decode_ids)
-            past_len = output_ids.shape[1]
-            text = tokenizer.decode(decode_ids)
-            print(text, end=' ', flush=True)
-        print()
-
-    input_feat = {k: torch.cat(v, dim=1) for k, v in input_feat.items()}
-    module = awq_model.get_submodule(layer)
-    clear_memory()
-    awq_model.quantize_layer(module, input_feat, quant_config)
-    os.makedirs(save_dir, exist_ok=True)
-    awq_model.save_quantized(ea_model, f'{save_dir}/{layer}.pth')
-    del awq_model
-    clear_memory()
-
-
-def quantize():
+def quantize(save_dir='save'):
     tokenizer, ea_model, awq_model = EagleAWQForCausalLM.from_pretrained(
         base_model_path='NousResearch/Llama-2-7b-chat-hf',
         ea_model_path='yuhuili/EAGLE-llama2-chat-7B',
@@ -211,7 +188,40 @@ def quantize():
         awq_model.quantize(tokenizer, quant_config=quant_config)
         quit()
 
-    quantize_layer(tokenizer, ea_model, awq_model, quant_config)
+    input_feat = defaultdict(list)
+    with AWQCalibration(awq_model, '', input_feat), torch.no_grad():
+        prompt = '[INST] tell me something interesting about the solar eclipse in April 2024. [/INST]'
+        input_ids = tokenizer([prompt], return_tensors="pt").input_ids
+        input_ids = input_ids.to('cuda:0')
+        cnt_tokens = 0
+        past_len = input_ids.shape[1]
+        for output_ids in ea_model.ea_generate(input_ids, max_length=128):
+            decode_ids = output_ids[0, past_len:].tolist()
+            cnt_tokens += len(decode_ids)
+            past_len = output_ids.shape[1]
+            text = tokenizer.decode(decode_ids)
+            print(text, end=' ', flush=True)
+        print()
+    input_feat = {k: torch.cat(v, dim=1) for k, v in input_feat.items()}
+    clear_memory()
+
+    all_layers = input_feat.keys()
+    all_layers = [re.sub('(layers\.\d+)\..*', '\g<1>', s) for s in all_layers]
+    all_layers = set(all_layers)
+
+    for layer_path in all_layers:
+        layer = awq_model.get_submodule(layer_path)
+        layer_input_feat = {
+            k.replace(layer_path + '.', ''): v
+            for k, v in input_feat.items()
+            if k.startswith(layer_path)
+        }
+        awq_model.quantize_layer(layer, layer_input_feat, quant_config)
+        clear_memory()
+        breakpoint()
+
+    os.makedirs(save_dir, exist_ok=True)
+    awq_model.save_quantized(ea_model, f'{save_dir}/save.pth')
 
 
 def load_and_test(mode, pth_path='save.pth'):
@@ -316,6 +326,6 @@ if __name__ == '__main__':
 
     #load_and_test('nf4-baseonly')      # speed=8.7
     #load_and_test('nf4-toponly')       # speed=19.8   ***
-    #quantize()
+    quantize()
     #load_and_test('nf4-awq')           # speed=6.6
-    load_and_test('fp16-awq', 'save/model.ea_layer.layers.0.pth')          # speed=31.2   ***
+    #load_and_test('fp16-awq', 'save/model.ea_layer.layers.0.pth')          # speed=31.2   ***
