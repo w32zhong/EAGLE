@@ -209,8 +209,8 @@ def quantize(save_dir='save'):
     all_layers = [re.sub('(layers\.\d+)\..*', '\g<1>', s) for s in all_layers]
     all_layers = set(all_layers)
 
-    for layer_path in all_layers:
-        print('Quantizing:', layer_path)
+    for i, layer_path in enumerate(all_layers):
+        print(f'Quantizing {i}-th layer:', layer_path)
         layer = awq_model.get_submodule(layer_path)
         layer_input_feat = {
             k.replace(layer_path + '.', ''): v
@@ -224,7 +224,7 @@ def quantize(save_dir='save'):
     awq_model.save_quantized(ea_model, f'{save_dir}/save.pth')
 
 
-def load_and_test(mode, pth_path='save.pth'):
+def load_and_test(mode, pth_path='save/save.pth'):
     if mode == 'fp16':
         kwargs = dict(quantize_top_layer=False, load_in_4bit=False)
     elif mode == 'int8':
@@ -237,7 +237,7 @@ def load_and_test(mode, pth_path='save.pth'):
         kwargs = dict(quantize_top_layer=True)
     elif mode == 'nf4-awq':
         kwargs = dict(quantize_top_layer=False, load_in_4bit=True)
-    elif mode == 'fp16-awq':
+    elif mode == 'awq':
         kwargs = dict()
     else:
         raise ValueError
@@ -295,6 +295,7 @@ def load_and_test(mode, pth_path='save.pth'):
             delattr(p_module, child_key)
         clear_memory()
         for p_module, child_key, q_linear in to_be_replaced:
+            q_linear.weight = q_linear.qweight # proxy for compability
             setattr(p_module, child_key, q_linear)
 
     print(ea_model)
@@ -326,6 +327,8 @@ if __name__ == '__main__':
 
     #load_and_test('nf4-baseonly')      # speed=8.7
     #load_and_test('nf4-toponly')       # speed=19.8   ***
-    quantize()
+    #quantize()
     #load_and_test('nf4-awq')           # speed=6.6
     #load_and_test('fp16-awq', 'save/model.ea_layer.layers.0.pth')          # speed=31.2   ***
+
+    load_and_test('awq')
