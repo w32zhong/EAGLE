@@ -228,13 +228,13 @@ def quantize(save_dir='save', create_calib=False):
         quit()
 
     if create_calib:
-        create_calib_files(tokenizer, awq_model, ea_model, save_dir)
+        create_calib_files(tokenizer, awq_model, ea_model, './save/calib')
         quit()
 
     all_layer_paths = [f'model.base_model.model.layers.{l}' for l in range(32)] + ['model.ea_layer.layers.0']
-    for i, layer_path in enumerate(all_layer_paths[:]):
+    for i, layer_path in enumerate(all_layer_paths[:1]):
         print(f'Quantizing {i}-th layer:', layer_path)
-        with open(f'{save_dir}/{layer_path}.pkl', 'rb') as fh:
+        with open(f'./save/calib/{layer_path}.pkl', 'rb') as fh:
             input_feat = pickle.load(fh)
         for key, feat in input_feat.items():
             batch = min(feat.shape[1] // 512, 20) # 65
@@ -260,6 +260,7 @@ def test_vanilla(model_path='NousResearch/Llama-2-7b-chat-hf', save_dir='save'):
         model = AutoAWQForCausalLM.from_quantized('save/', fuse_layers=False)
         inputs = tokenizer([prompt], return_tensors="pt").to('cuda:0')
         model.eval()
+        print(model)
         streamer = TextStreamer(tokenizer)
         with torch.no_grad():
             output = model.generate(**inputs, streamer=streamer, max_length=128)
@@ -268,7 +269,7 @@ def test_vanilla(model_path='NousResearch/Llama-2-7b-chat-hf', save_dir='save'):
         model = AutoAWQForCausalLM.from_pretrained(
             model_path, device_map="auto", use_cache=False
         )
-        model.quantize(tokenizer, quant_config=quant_config)
+        model.quantize(tokenizer, quant_config=quant_config, apply_clip=False)
         model.save_quantized(save_dir)
 
 
@@ -374,8 +375,11 @@ if __name__ == '__main__':
 
     #load_and_test('nf4-baseonly')      # speed=8.7
     #load_and_test('nf4-toponly')       # speed=19.8   ***
-    #quantize(create_calib=False)
     #load_and_test('nf4-awq')           # speed=6.6
     #load_and_test('fp16-awq', 'save/model.ea_layer.layers.0.pth')          # speed=31.2   ***
+
+    #quantize(create_calib=False)
     load_and_test('awq')
+
     #test_vanilla()
+    #test_vanilla(save_dir=None)
