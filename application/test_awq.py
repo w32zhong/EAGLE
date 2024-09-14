@@ -76,7 +76,6 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
         if input_feat is None:
             input_feat = defaultdict(int)
 
-        # attention input
         layers.append(
             dict(
                 prev_op=module.input_layernorm if hasattr(module, 'input_layernorm') else module.E,
@@ -90,8 +89,6 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
                 kwargs=module_kwargs,
             )
         )
-
-        # attention out
         layers.append(
             dict(
                 prev_op=module.self_attn.v_proj,
@@ -99,8 +96,6 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
                 inp=input_feat["self_attn.o_proj"],
             )
         )
-
-        # linear 1
         layers.append(
             dict(
                 prev_op=module.post_attention_layernorm,
@@ -109,8 +104,6 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
                 module2inspect=module.mlp,
             )
         )
-
-        # linear 2
         layers.append(
             dict(
                 prev_op=module.mlp.up_proj,
@@ -122,26 +115,27 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
         return layers
 
     def quantize_layer(self, layer, input_feat, quant_config):
+        # initialize
         module_config = self.get_layers_for_scaling(layer, input_feat, {})
         self.quantize(None, quant_config=quant_config, init_only=True)
         named_linears = {
             path: m for path, m in layer.named_modules()
             if isinstance(m, nn.Linear)
         }
-
+        # find and apply scaling factors
         scales_list = [
             self.quantizer._search_best_scale(idx, layer, **linear_config)
             for idx, linear_config in enumerate(module_config)
         ]
         apply_scale(layer, scales_list, input_feat_dict=input_feat)
         clear_memory()
-
-        #clip_list = self.quantizer._search_best_clip(
-        #    layer, named_linears, input_feat
-        #)
-        #apply_clip(layer, clip_list)
-        #clear_memory()
-
+        # find and apply clipping thresholds
+        clip_list = self.quantizer._search_best_clip(
+            layer, named_linears, input_feat
+        )
+        apply_clip(layer, clip_list)
+        clear_memory()
+        # quantize
         self.quantizer._apply_quant(layer, named_linears)
         clear_memory()
 
@@ -231,12 +225,13 @@ def quantize(save_dir='save', create_calib=False):
         quit()
 
     all_layer_paths = [f'model.base_model.model.layers.{l}' for l in range(32)] + ['model.ea_layer.layers.0']
-    for i, layer_path in enumerate(all_layer_paths[:1]):
+    for i, layer_path in enumerate(all_layer_paths[:]):
         print(f'Quantizing {i}-th layer:', layer_path)
         with open(f'./save/calib/{layer_path}.pkl', 'rb') as fh:
             input_feat = pickle.load(fh)
         for key, feat in input_feat.items():
-            batch = min(feat.shape[1] // 512, 20) # 65
+            # in original version this is 65 * 512 * 4096
+            batch = min(feat.shape[1] // 512, 30)
             extra = feat.shape[1] % 512
             dim = feat.shape[-1]
             feat = feat[:,:-extra,:].reshape(-1, 512, dim)
@@ -379,8 +374,8 @@ if __name__ == '__main__':
     #load_and_test('nf4-awq')           # speed=6.6
     #load_and_test('fp16-awq', 'save/model.ea_layer.layers.0.pth')          # speed=31.2   ***
 
-    #quantize(create_calib=False)
-    load_and_test('awq')
+    quantize(create_calib=False)
+    #load_and_test('awq')
 
     #test_vanilla()
     #test_vanilla(save_dir=None)
