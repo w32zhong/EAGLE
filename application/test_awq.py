@@ -177,7 +177,7 @@ class AWQCalibration():
             hook.remove()
 
 
-def create_calib_files(tokenizer, awq_model, ea_model):
+def create_calib_files(tokenizer, awq_model, ea_model, save_dir):
     with open('application/prompts.json', 'r') as fh:
         prompts = json.load(fh)
     calib_questions = [p['prompt_text'] for p in prompts][:]
@@ -225,7 +225,7 @@ def quantize(save_dir='save', create_calib=False):
         quit()
 
     if create_calib:
-        create_calib_files(tokenizer, awq_model, ea_model)
+        create_calib_files(tokenizer, awq_model, ea_model, save_dir)
         quit()
     else:
         breakpoint()
