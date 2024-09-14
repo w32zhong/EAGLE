@@ -177,14 +177,46 @@ class AWQCalibration():
             hook.remove()
 
 
-def quantize(save_dir='save'):
+def create_calib_files(tokenizer, awq_model, ea_model):
+    with open('application/prompts.json', 'r') as fh:
+        prompts = json.load(fh)
+    calib_questions = [p['prompt_text'] for p in prompts][:]
+
+    all_layer_paths = [f'model.base_model.model.layers.{l}' for l in range(32)] + ['model.ea_layer.layers.0']
+
+    for m, layer_path in enumerate(all_layer_paths):
+        input_feat = defaultdict(list)
+        with AWQCalibration(awq_model, layer_path, input_feat), torch.no_grad():
+            for n, prompt in enumerate(calib_questions):
+                prompt = '[INST] ' + prompt + ' [/INST]'
+                print(m, len(all_layer_paths), layer_path)
+                print(n, len(calib_questions), prompt)
+                input_ids = tokenizer([prompt], return_tensors="pt").input_ids
+                input_ids = input_ids.to('cuda:0')
+                cnt_tokens = 0
+                past_len = input_ids.shape[1]
+                for output_ids in ea_model.ea_generate(input_ids, max_length=512):
+                    decode_ids = output_ids[0, past_len:].tolist()
+                    cnt_tokens += len(decode_ids)
+                    past_len = output_ids.shape[1]
+                    text = tokenizer.decode(decode_ids)
+                    print(text, end=' ', flush=True)
+                print()
+        with open(f'{save_dir}/{layer_path}.pkl', 'wb') as fh:
+            input_feat = {k: torch.cat(v, dim=1) for k, v in input_feat.items()}
+            # factory calib data: torch.Size([65, 512, 4096])
+            # p input_feat.popitem()[1].shape
+            pickle.dump(input_feat, fh)
+        clear_memory()
+
+
+def quantize(save_dir='save', create_calib=False):
     tokenizer, ea_model, awq_model = EagleAWQForCausalLM.from_pretrained(
         base_model_path='NousResearch/Llama-2-7b-chat-hf',
         ea_model_path='yuhuili/EAGLE-llama2-chat-7B',
         torch_dtype=torch.float16,
         device_map=('auto' if not use_original else None)
     )
-    tokenizer = ea_model.tokenizer
 
     quant_config = { "zero_point": True, "q_group_size": 128, "w_bit": 4, "version": "GEMM" }
 
@@ -192,40 +224,14 @@ def quantize(save_dir='save'):
         awq_model.quantize(tokenizer, quant_config=quant_config)
         quit()
 
-    with open('application/prompts.json', 'r') as fh:
-        prompts = json.load(fh)
-    calib_questions = [p['prompt_text'] for p in prompts]
-
-    input_feat = defaultdict(list)
-    with AWQCalibration(awq_model, '', input_feat), torch.no_grad():
-        for prompt in calib_questions:
-            prompt = '[INST] ' + prompt + ' [/INST]'
-            print(prompt)
-            input_ids = tokenizer([prompt], return_tensors="pt").input_ids
-            input_ids = input_ids.to('cuda:0')
-            cnt_tokens = 0
-            past_len = input_ids.shape[1]
-            for output_ids in ea_model.ea_generate(input_ids, max_length=512):
-                decode_ids = output_ids[0, past_len:].tolist()
-                cnt_tokens += len(decode_ids)
-                past_len = output_ids.shape[1]
-                text = tokenizer.decode(decode_ids)
-                print(text, end=' ', flush=True)
-            print()
-    breakpoint()
-
-    # torch.Size([65, 512, 4096])
-    with open(f'{save_dir}/collect.pkl', 'wb') as fh:
-        pickle.dump(input_feat, fh)
+    if create_calib:
+        create_calib_files(tokenizer, awq_model, ea_model)
         quit()
-    input_feat = {k: torch.cat(v, dim=1) for k, v in input_feat.items()}
-    clear_memory()
+    else:
+        breakpoint()
 
-    all_layers = input_feat.keys()
-    all_layers = [re.sub('(layers\.\d+)\..*', '\g<1>', s) for s in all_layers]
-    all_layers = set(all_layers)
-
-    for i, layer_path in enumerate(all_layers):
+    all_layer_paths = [f'model.base_model.model.layers.{l}' for l in range(32)] + ['model.ea_layer.layers.0']
+    for i, layer_path in enumerate(all_layer_paths):
         print(f'Quantizing {i}-th layer:', layer_path)
         layer = awq_model.get_submodule(layer_path)
         layer_input_feat = {

@@ -3,6 +3,7 @@ tags
 stats.json
 data/1/
 wandb/
+save/
 *.pth
 
 # Byte-compiled / optimized / DLL files
