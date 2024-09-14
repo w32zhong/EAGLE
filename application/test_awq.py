@@ -340,8 +340,10 @@ def load_and_test(mode, pth_path='save/save.pth'):
             to_be_replaced.append((p_module, child_key, q_linear))
 
         for p_module, child_key, _ in to_be_replaced:
+            save = getattr(p_module, child_key)
             delattr(p_module, child_key)
-        clear_memory()
+            setattr(p_module, child_key + '_original', save)
+        #clear_memory()
         for p_module, child_key, q_linear in to_be_replaced:
             q_linear.weight = q_linear.qweight # proxy for compability
             setattr(p_module, child_key, q_linear)

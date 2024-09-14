@@ -566,7 +566,7 @@ class LlamaAttention(nn.Module):
             value_states = torch.cat(value_states, dim=-1)
 
         else:
-            query_states = self.q_proj(hidden_states)
+            query_states = self.q_proj(hidden_states) ###
             key_states = self.k_proj(hidden_states)
             value_states = self.v_proj(hidden_states)
 
