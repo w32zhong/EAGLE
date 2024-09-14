@@ -42,12 +42,12 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
         Q_state_dict = dict()
         for path, module in model_to_save.named_modules():
             name = module.__class__.__name__
-            print('saving', path, name)
             if 'WQLinear' not in name:
                 continue
+            print('saving', path, name)
             module_state_dict = module.state_dict()
             for key in module_state_dict:
-                Q_state_dict[path + f".{key}"] = module
+                Q_state_dict[path + f".{key}"] = module_state_dict[key]
         torch.save(Q_state_dict, save_pth)
 
     @staticmethod
@@ -125,6 +125,11 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
     def quantize_layer(self, layer, input_feat, quant_config):
         module_config = self.get_layers_for_scaling(layer, input_feat, {})
         self.quantize(None, quant_config=quant_config, init_only=True)
+        named_linears = {
+            path: m for path, m in layer.named_modules()
+            if isinstance(m, nn.Linear)
+        }
+
         scales_list = [
             self.quantizer._search_best_scale(idx, layer, **linear_config)
             for idx, linear_config in enumerate(module_config)
@@ -132,14 +137,12 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
         apply_scale(layer, scales_list, input_feat_dict=input_feat)
         clear_memory()
 
-        named_linears = {
-            path: m for path, m in layer.named_modules()
-            if isinstance(m, nn.Linear)
-        }
-        clip_list = self.quantizer._search_best_clip(
-            layer, named_linears, input_feat
-        )
-        apply_clip(layer, clip_list)
+        #clip_list = self.quantizer._search_best_clip(
+        #    layer, named_linears, input_feat
+        #)
+        #apply_clip(layer, clip_list)
+        #clear_memory()
+
         self.quantizer._apply_quant(layer, named_linears)
         clear_memory()
 
@@ -229,7 +232,7 @@ def quantize(save_dir='save', create_calib=False):
         quit()
 
     all_layer_paths = [f'model.base_model.model.layers.{l}' for l in range(32)] + ['model.ea_layer.layers.0']
-    for i, layer_path in enumerate(all_layer_paths):
+    for i, layer_path in enumerate(all_layer_paths[:]):
         print(f'Quantizing {i}-th layer:', layer_path)
         with open(f'{save_dir}/{layer_path}.pkl', 'rb') as fh:
             input_feat = pickle.load(fh)
@@ -325,10 +328,9 @@ def load_and_test(mode, pth_path='save/save.pth'):
             q_linear = q_linear_module.from_linear(
                 module, quant_config.w_bit, quant_config.q_group_size, True
             )
-            for subkey, dst_W in q_linear.named_buffers():
-                state = Q_state_dict[key + '.' + subkey]
-                src_W = getattr(state, subkey)
-                dst_W.copy_(src_W)
+            for subkey, _ in q_linear.named_buffers():
+                src = Q_state_dict[key + '.' + subkey]
+                setattr(q_linear, subkey, src)
             q_linear.to(next(module.parameters()).device)
 
             parent_key, child_key = parent(key)
@@ -372,9 +374,8 @@ if __name__ == '__main__':
 
     #load_and_test('nf4-baseonly')      # speed=8.7
     #load_and_test('nf4-toponly')       # speed=19.8   ***
-    quantize(create_calib=False)
+    #quantize(create_calib=False)
     #load_and_test('nf4-awq')           # speed=6.6
     #load_and_test('fp16-awq', 'save/model.ea_layer.layers.0.pth')          # speed=31.2   ***
-
-    #load_and_test('awq')
+    load_and_test('awq')
     #test_vanilla()
