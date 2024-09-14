@@ -227,19 +227,23 @@ def quantize(save_dir='save', create_calib=False):
     if create_calib:
         create_calib_files(tokenizer, awq_model, ea_model, save_dir)
         quit()
-    else:
-        breakpoint()
 
     all_layer_paths = [f'model.base_model.model.layers.{l}' for l in range(32)] + ['model.ea_layer.layers.0']
     for i, layer_path in enumerate(all_layer_paths):
         print(f'Quantizing {i}-th layer:', layer_path)
+        with open(f'{save_dir}/{layer_path}.pkl', 'rb') as fh:
+            input_feat = pickle.load(fh)
+        for key, feat in input_feat.items():
+            batch = min(feat.shape[1] // 512, 20) # 65
+            extra = feat.shape[1] % 512
+            dim = feat.shape[-1]
+            feat = feat[:,:-extra,:].reshape(-1, 512, dim)
+            feat = feat[:batch, ...]
+            input_feat[key] = feat
+            print(key, feat.shape)
+        clear_memory()
         layer = awq_model.get_submodule(layer_path)
-        layer_input_feat = {
-            k.replace(layer_path + '.', ''): v
-            for k, v in input_feat.items()
-            if k.startswith(layer_path)
-        }
-        awq_model.quantize_layer(layer, layer_input_feat, quant_config)
+        awq_model.quantize_layer(layer, input_feat, quant_config)
         clear_memory()
 
     os.makedirs(save_dir, exist_ok=True)
@@ -368,7 +372,7 @@ if __name__ == '__main__':
 
     #load_and_test('nf4-baseonly')      # speed=8.7
     #load_and_test('nf4-toponly')       # speed=19.8   ***
-    quantize()
+    quantize(create_calib=False)
     #load_and_test('nf4-awq')           # speed=6.6
     #load_and_test('fp16-awq', 'save/model.ea_layer.layers.0.pth')          # speed=31.2   ***
 
