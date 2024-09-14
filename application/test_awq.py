@@ -38,16 +38,22 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
             quant_config=None, processor=None)
 
 
-    def save_quantized(self, model_to_save, save_pth):
+    def save_quantized(self, layers, save_pth):
         Q_state_dict = dict()
-        for path, module in model_to_save.named_modules():
-            name = module.__class__.__name__
-            if 'WQLinear' not in name:
-                continue
-            print('saving', path, name)
-            module_state_dict = module.state_dict()
-            for key in module_state_dict:
-                Q_state_dict[path + f".{key}"] = module_state_dict[key]
+        for layer_path in layers:
+            layer = self.get_submodule(layer_path)
+            layer_config = self.get_layers_for_scaling(layer, None, None)
+            layer_prev_ops = [c['prev_op'] for c in layer_config]
+            to_save = []
+            for subkey, submod in layer.named_modules():
+                name = submod.__class__.__name__.lower()
+                if 'wqlinear' in name or submod in layer_prev_ops:
+                    to_save.append((subkey, submod, name))
+            for subkey, submod, name in to_save:
+                sd = submod.state_dict()
+                for state_key in sd:
+                    key = f'{layer_path}.{subkey}.{state_key}'
+                    Q_state_dict[key] = sd[state_key]
         torch.save(Q_state_dict, save_pth)
 
     @staticmethod
@@ -67,13 +73,8 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
     @staticmethod
     def get_layers_for_scaling(module, input_feat, module_kwargs):
         layers = []
-
-        # dict(
-        #     prev_op: the previous operator
-        #     layers: linear weights to concate
-        #     inp: inputs of this operator
-        #     module2inspect: module to call forward(inp, kwargs)
-        # )
+        if input_feat is None:
+            input_feat = defaultdict(int)
 
         # attention input
         layers.append(
@@ -91,15 +92,13 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
         )
 
         # attention out
-        # Please refer to https://github.com/mit-han-lab/llm-awq/pull/67#issue-1850622696
-        if module.self_attn.v_proj.weight.shape == module.self_attn.o_proj.weight.shape:
-            layers.append(
-                dict(
-                    prev_op=module.self_attn.v_proj,
-                    layers=[module.self_attn.o_proj],
-                    inp=input_feat["self_attn.o_proj"],
-                )
+        layers.append(
+            dict(
+                prev_op=module.self_attn.v_proj,
+                layers=[module.self_attn.o_proj],
+                inp=input_feat["self_attn.o_proj"],
             )
+        )
 
         # linear 1
         layers.append(
@@ -250,7 +249,7 @@ def quantize(save_dir='save', create_calib=False):
         clear_memory()
 
     os.makedirs(save_dir, exist_ok=True)
-    awq_model.save_quantized(ea_model, f'{save_dir}/save.pth')
+    awq_model.save_quantized(all_layer_paths, f'{save_dir}/save.pth')
 
 
 def test_vanilla(model_path='NousResearch/Llama-2-7b-chat-hf', save_dir='save'):
@@ -340,10 +339,10 @@ def load_and_test(mode, pth_path='save/save.pth'):
             to_be_replaced.append((p_module, child_key, q_linear))
 
         for p_module, child_key, _ in to_be_replaced:
-            save = getattr(p_module, child_key)
+            #save = getattr(p_module, child_key)
             delattr(p_module, child_key)
-            setattr(p_module, child_key + '_original', save)
-        #clear_memory()
+            #setattr(p_module, child_key + '_original', save)
+        clear_memory()
         for p_module, child_key, q_linear in to_be_replaced:
             q_linear.weight = q_linear.qweight # proxy for compability
             setattr(p_module, child_key, q_linear)
