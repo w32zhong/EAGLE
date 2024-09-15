@@ -294,20 +294,22 @@ def load_and_test(mode, pth_path='save/save.pth'):
     )
     tokenizer = ea_model.tokenizer
 
+    def parent(key):
+        path_fields = key.split('.')
+        parent_key = '.'.join(path_fields[:-1])
+        child_key = path_fields[-1]
+        return parent_key, child_key
+
     if 'awq' in mode:
         quant_config = { "zero_point": True, "q_group_size": 128, "w_bit": 4, "version": "GEMM" }
         quant_config = AwqConfig.from_dict(quant_config)
         Q_state_dict = torch.load(pth_path)
+        Q_mod_keys = set([parent(key)[0] for key in Q_state_dict.keys()])
         to_be_replaced = []
-        for key, module in ea_model.named_modules():
-            def parent(key):
-                path_fields = key.split('.')
-                parent_key = '.'.join(path_fields[:-1])
-                child_key = path_fields[-1]
-                return parent_key, child_key
-            Q_mod_keys = set([parent(key)[0] for key in Q_state_dict.keys()])
-
+        for key, module in awq_model.named_modules():
             if key not in Q_mod_keys:
+                continue
+            elif 'layernorm' in key:
                 continue
 
             version = quant_config.version
@@ -323,13 +325,13 @@ def load_and_test(mode, pth_path='save/save.pth'):
             q_linear = q_linear_module.from_linear(
                 module, quant_config.w_bit, quant_config.q_group_size, True
             )
-            for subkey, _ in q_linear.named_buffers():
-                src = Q_state_dict[key + '.' + subkey]
-                setattr(q_linear, subkey, src)
+            #for subkey in q_linear.state_dict():
+            #    src = Q_state_dict[key + '.' + subkey]
+            #    setattr(q_linear, subkey, src)
             q_linear.to(next(module.parameters()).device)
 
             parent_key, child_key = parent(key)
-            p_module = ea_model.get_submodule(parent_key)
+            p_module = awq_model.get_submodule(parent_key)
 
             to_be_replaced.append((p_module, child_key, q_linear))
 
@@ -343,6 +345,7 @@ def load_and_test(mode, pth_path='save/save.pth'):
             setattr(p_module, child_key, q_linear)
 
     print(ea_model)
+    awq_model.load_state_dict(Q_state_dict, strict=False)
     with torch.no_grad():
         prompt = '[INST] tell me something interesting about the solar eclipse in April 2024. [/INST]'
         input_ids = tokenizer([prompt], return_tensors="pt").input_ids
@@ -374,8 +377,8 @@ if __name__ == '__main__':
     #load_and_test('nf4-awq')           # speed=6.6
     #load_and_test('fp16-awq', 'save/model.ea_layer.layers.0.pth')          # speed=31.2   ***
 
-    quantize(create_calib=False)
-    #load_and_test('awq')
+    #quantize(create_calib=False)
+    load_and_test('awq')
 
     #test_vanilla()
     #test_vanilla(save_dir=None)
