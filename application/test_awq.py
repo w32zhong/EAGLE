@@ -219,7 +219,8 @@ def create_calib_files(tokenizer, awq_model, ea_model, save_dir):
 def AWQ_quantize(slice_layers, quant_config, awq_model, apply_clip=True):
     group_size = quant_config['q_group_size']
     kernel = quant_config['version']
-    fname = f'awq-layers({slice_layers.start}-{slice_layers.stop}-{slice_layers.step})-g{group_size}-{kernel}'
+    clip_str = 'clip' if apply_clip else 'noclip'
+    fname = f'awq-layers({slice_layers.start}-{slice_layers.stop}-{slice_layers.step})-g{group_size}-{clip_str}-{kernel}'
     save_pth = f'save/{fname}.pth'
     os.makedirs('save', exist_ok=True)
     if os.path.exists(save_pth):
@@ -249,7 +250,8 @@ def AWQ_quantize(slice_layers, quant_config, awq_model, apply_clip=True):
 
 
 def test(comment, quantize_top_layer=False, load_in_8bit=False, load_in_4bit=False,
-        awq_group_size=-1, awq_layers=None, awq_kernel="GEMM", results=None):
+        awq_group_size=-1, awq_layers=None, awq_kernel="GEMM", awq_apply_clip=True,
+        results=None):
 
     tokenizer, ea_model, awq_model = EagleAWQForCausalLM.from_pretrained(
         base_model_path='NousResearch/Llama-2-7b-chat-hf',
@@ -278,7 +280,8 @@ def test(comment, quantize_top_layer=False, load_in_8bit=False, load_in_4bit=Fal
             "version": awq_kernel
         }
         awq_layers = eval(awq_layers)
-        save_pth = AWQ_quantize(awq_layers, quant_config, awq_model, apply_clip=True)
+        save_pth = AWQ_quantize(awq_layers, quant_config, awq_model,
+            apply_clip=awq_apply_clip)
         if save_pth is None:
             results['__redo__'] = True
             return
