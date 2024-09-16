@@ -1,0 +1,2 @@
+comment	quantize_top_layer	load_in_8bit	load_in_4bit	awq_group_size	awq_layers	awq_kernel
+awq-eagle-g64-gemm (quantize only top layer)	FALSE	FALSE	FALSE	64	slice(-1, None)	GEMM
