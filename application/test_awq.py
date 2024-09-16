@@ -278,7 +278,7 @@ def test(comment, quantize_top_layer=False, load_in_8bit=False, load_in_4bit=Fal
             "version": awq_kernel
         }
         awq_layers = eval(awq_layers)
-        save_pth = AWQ_quantize(awq_layers, quant_config, awq_model, apply_clip=False)
+        save_pth = AWQ_quantize(awq_layers, quant_config, awq_model, apply_clip=True)
         if save_pth is None:
             results['__redo__'] = True
             return
