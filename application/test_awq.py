@@ -123,7 +123,7 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
 
         return layers
 
-    def quantize_layer(self, layer, input_feat, quant_config, apply_clip=True):
+    def quantize_layer(self, layer, input_feat, quant_config, is_apply_clip=True):
         # initialize
         module_config = self.get_layers_for_scaling(layer, input_feat, {})
         self.quantize(None, quant_config=quant_config, init_only=True)
@@ -139,7 +139,7 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
         apply_scale(layer, scales_list, input_feat_dict=input_feat)
         clear_memory()
         # find and apply clipping thresholds
-        if apply_clip:
+        if is_apply_clip:
             clip_list = self.quantizer._search_best_clip(
                 layer, named_linears, input_feat
             )
@@ -218,7 +218,8 @@ def create_calib_files(tokenizer, awq_model, ea_model, save_dir):
 
 def AWQ_quantize(slice_layers, quant_config, awq_model, apply_clip=True):
     group_size = quant_config['q_group_size']
-    fname = f'awq-layers({slice_layers.start}-{slice_layers.stop}-{slice_layers.step})-g{group_size}'
+    kernel = quant_config['version']
+    fname = f'awq-layers({slice_layers.start}-{slice_layers.stop}-{slice_layers.step})-g{group_size}-{kernel}'
     save_pth = f'save/{fname}.pth'
     os.makedirs('save', exist_ok=True)
     if os.path.exists(save_pth):
@@ -240,7 +241,7 @@ def AWQ_quantize(slice_layers, quant_config, awq_model, apply_clip=True):
             #print(key, feat.shape)
         clear_memory()
         layer = awq_model.get_submodule(layer_path)
-        awq_model.quantize_layer(layer, input_feat, quant_config, apply_clip=apply_clip)
+        awq_model.quantize_layer(layer, input_feat, quant_config, is_apply_clip=apply_clip)
         clear_memory()
 
     awq_model.save_quantized(all_layer_paths[slice_layers], save_pth)
@@ -277,7 +278,7 @@ def test(comment, quantize_top_layer=False, load_in_8bit=False, load_in_4bit=Fal
             "version": awq_kernel
         }
         awq_layers = eval(awq_layers)
-        save_pth = AWQ_quantize(awq_layers, quant_config, awq_model)
+        save_pth = AWQ_quantize(awq_layers, quant_config, awq_model, apply_clip=False)
         if save_pth is None:
             results['__redo__'] = True
             return

@@ -1,2 +1,12 @@
 comment	quantize_top_layer	load_in_8bit	load_in_4bit	awq_group_size	awq_layers	awq_kernel
+eagle-fp16	FALSE	FALSE	FALSE	-1	None	None
+eagle-bnb.int8()	TRUE	TRUE	FALSE	-1	None	None
+eagle-nf4 (quantize only base model)	FALSE	FALSE	TRUE	-1	None	None
+eagle-nf4 (quantize only top layer)	TRUE	FALSE	FALSE	-1	None	None
+eagle-nf4 (quantize all)	TRUE	FALSE	TRUE	-1	None	None
+eagle (awq top layer, nf4 base model)	FALSE	FALSE	TRUE	64	slice(-1, None)	GEMM
+eagle (awq base model, nf4 top layer)	TRUE	FALSE	FALSE	64	slice(0, -1)	GEMM
+awq-eagle-g64-gemm	FALSE	FALSE	FALSE	64	slice(None)	GEMM
+awq-eagle-g64-gemm (quantize only base model)	FALSE	FALSE	FALSE	64	slice(0, -1)	GEMM
 awq-eagle-g64-gemm (quantize only top layer)	FALSE	FALSE	FALSE	64	slice(-1, None)	GEMM
+awq-eagle-g128-gemm	FALSE	FALSE	FALSE	128	slice(None)	GEMM
