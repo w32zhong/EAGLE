@@ -123,7 +123,7 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
 
         return layers
 
-    def quantize_layer(self, layer, input_feat, quant_config):
+    def quantize_layer(self, layer, input_feat, quant_config, apply_clip=True):
         # initialize
         module_config = self.get_layers_for_scaling(layer, input_feat, {})
         self.quantize(None, quant_config=quant_config, init_only=True)
@@ -139,11 +139,12 @@ class EagleAWQForCausalLM(BaseAWQForCausalLM):
         apply_scale(layer, scales_list, input_feat_dict=input_feat)
         clear_memory()
         # find and apply clipping thresholds
-        clip_list = self.quantizer._search_best_clip(
-            layer, named_linears, input_feat
-        )
-        apply_clip(layer, clip_list)
-        clear_memory()
+        if apply_clip:
+            clip_list = self.quantizer._search_best_clip(
+                layer, named_linears, input_feat
+            )
+            apply_clip(layer, clip_list)
+            clear_memory()
         # quantize
         self.quantizer._apply_quant(layer, named_linears)
         clear_memory()
@@ -215,7 +216,7 @@ def create_calib_files(tokenizer, awq_model, ea_model, save_dir):
         clear_memory()
 
 
-def AWQ_quantize(slice_layers, quant_config, awq_model):
+def AWQ_quantize(slice_layers, quant_config, awq_model, apply_clip=True):
     group_size = quant_config['q_group_size']
     fname = f'awq-layers({slice_layers.start}-{slice_layers.stop}-{slice_layers.step})-g{group_size}'
     save_pth = f'save/{fname}.pth'
@@ -239,11 +240,11 @@ def AWQ_quantize(slice_layers, quant_config, awq_model):
             #print(key, feat.shape)
         clear_memory()
         layer = awq_model.get_submodule(layer_path)
-        awq_model.quantize_layer(layer, input_feat, quant_config)
+        awq_model.quantize_layer(layer, input_feat, quant_config, apply_clip=apply_clip)
         clear_memory()
 
     awq_model.save_quantized(all_layer_paths[slice_layers], save_pth)
-    return save_pth
+    return None
 
 
 def test(comment, quantize_top_layer=False, load_in_8bit=False, load_in_4bit=False,
@@ -276,20 +277,11 @@ def test(comment, quantize_top_layer=False, load_in_8bit=False, load_in_4bit=Fal
             "version": awq_kernel
         }
         awq_layers = eval(awq_layers)
-        Q_state_dict = torch.load(AWQ_quantize(awq_layers, quant_config, awq_model))
-        del tokenizer, ea_model, awq_model
-        clear_memory()
-        clear_memory()
-        breakpoint()
-        tokenizer, ea_model, awq_model = EagleAWQForCausalLM.from_pretrained(
-            base_model_path='NousResearch/Llama-2-7b-chat-hf',
-            ea_model_path='yuhuili/EAGLE-llama2-chat-7B',
-            torch_dtype=torch.float16,
-            device_map='auto',
-            quantize_top_layer=quantize_top_layer,
-            load_in_8bit=load_in_8bit,
-            load_in_4bit=load_in_4bit
-        )
+        save_pth = AWQ_quantize(awq_layers, quant_config, awq_model)
+        if save_pth is None:
+            results['__redo__'] = True
+            return
+        Q_state_dict = torch.load(save_pth)
         quant_config = AwqConfig.from_dict(quant_config)
         Q_mod_keys = set([parent(key)[0] for key in Q_state_dict.keys()])
         to_be_replaced = []
@@ -368,22 +360,26 @@ if __name__ == '__main__':
     df_params = df_params.replace({float('nan'): None})
     df_results = []
     for params in df_params.to_dict(orient='records'):
-        print(Fore.RED, Back.YELLOW, params, Style.RESET_ALL)
-        try:
-            params['results'] = manager.dict()
-            os.environ["TOKENIZERS_PARALLELISM"] = "true"
-            if args.debug:
-                process = threading.Thread(target=test, kwargs=params)
-            else:
-                process = multiprocessing.Process(target=test, kwargs=params)
-            process.start()
-            process.join()
-        except:
-            if args.debug:
-                pass
-            else:
-                process.terminate()
-            break
+        while True:
+            print(Fore.RED, Back.YELLOW, params, Style.RESET_ALL)
+            try:
+                params['results'] = manager.dict()
+                params['results']['__redo__'] = False
+                os.environ["TOKENIZERS_PARALLELISM"] = "true"
+                if args.debug:
+                    process = threading.Thread(target=test, kwargs=params)
+                else:
+                    process = multiprocessing.Process(target=test, kwargs=params)
+                process.start()
+                process.join()
+            except:
+                if args.debug:
+                    pass
+                else:
+                    process.terminate()
+                break
+            if not params['results']['__redo__']:
+                break
         results = dict(params['results'])
         print(Fore.RED, Back.YELLOW, results, Style.RESET_ALL, end='\n\n')
         df_results.append(results)

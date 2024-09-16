@@ -1,2 +1,2 @@
-comment	quantize_top_layer	load_in_8bit	load_in_4bit	awq_group_size	awq_layers	awq_kernel
-awq-eagle-g64-gemm (quantize only top layer)	False	False	False	64	slice(-1, None)	GEMM
+comment	quantize_top_layer	load_in_8bit	load_in_4bit	awq_group_size	awq_layers	awq_kernel	__redo__	time_delta	cnt_tokens	speed
+awq-eagle-g64-gemm (quantize only top layer)	False	False	False	64	slice(-1, None)	GEMM	False	11.683394432067871	489	41.85427470100834
