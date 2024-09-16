@@ -1,12 +1,13 @@
-comment	quantize_top_layer	load_in_8bit	load_in_4bit	awq_group_size	awq_layers	awq_kernel	__redo__	time_delta	cnt_tokens	speed
-eagle-fp16	False	False	False	-1			False	12.28809905052185	492.0	40.038739757644265
-eagle-bnb.int8()	True	True	False	-1			False	54.76818132400513	488.0	8.910283091436296
-eagle-nf4 (quantize only base model)	False	False	True	-1			False	56.93406534194946	490.0	8.606446721431714
-eagle-nf4 (quantize only top layer)	True	False	False	-1			False	25.568233728408813	488.0	19.08618347218033
-eagle-nf4 (quantize all)	True	False	True	-1			False	92.85210537910461	488.0	5.255669734224672
-eagle (awq top layer, nf4 base model)	False	False	True	64	slice(-1, None)	GEMM	False	57.91975164413452	490.0	8.459981027035738
-eagle (awq base model, nf4 top layer)	True	False	False	64	slice(0, -1)	GEMM	False			
-awq-eagle-g64-gemm	False	False	False	64	slice(None)	GEMM	False			
-awq-eagle-g64-gemm (quantize only base model)	False	False	False	64	slice(0, -1)	GEMM	False			
-awq-eagle-g64-gemm (quantize only top layer)	False	False	False	64	slice(-1, None)	GEMM	False			
-awq-eagle-g128-gemm	False	False	False	128	slice(None)	GEMM	False			
+comment	quantize_top_layer	load_in_8bit	load_in_4bit	awq_group_size	awq_layers	awq_kernel	awq_apply_clip	__redo__	time_delta	cnt_tokens	speed
+eagle-fp16	False	False	False	-1				False	12.267685174942017	492	40.10536568096478
+eagle-bnb.int8()	True	True	False	-1				False	52.262657165527344	489	9.35658511298477
+eagle-nf4 (quantize only base model)	False	False	True	-1				False	57.37660336494446	490	8.540066355677245
+eagle-nf4 (quantize only top layer)	True	False	False	-1				False	24.397557735443115	488	20.00200205658564
+eagle-nf4 (quantize all)	True	False	True	-1				False	92.62926197052002	488	5.268313593552216
+eagle (awq top layer, nf4 base model)	False	False	True	64	slice(-1, None)	GEMM	True	False	55.827836990356445	490	8.77698342646951
+eagle (awq base model, nf4 top layer)	True	False	False	64	slice(0, -1)	GEMM	True	False	21.60461711883545	488	22.58776433369649
+awq-eagle-g64-gemm	False	False	False	64	slice(None)	GEMM	True	False	9.848145961761475	489	49.654016288821914
+awq-eagle-g64-gemm (quantize only base model)	False	False	False	64	slice(0, -1)	GEMM	True	False	10.29868745803833	488	47.38467906598198
+awq-eagle-g64-gemm (quantize only top layer)	False	False	False	64	slice(-1, None)	GEMM	True	False	11.56038761138916	488	42.21311744938622
+awq-eagle-g128-gemm	False	False	False	128	slice(None)	GEMM	True	False	9.750671148300171	490	50.25295105818654
+awq-eagle-g128-gemm	False	False	False	128	slice(None)	GEMM	False	False	10.4148428440094	491	47.144254344886484
