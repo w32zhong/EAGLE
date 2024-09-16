@@ -40,7 +40,7 @@ def test_vanilla(model_path='NousResearch/Llama-2-7b-chat-hf', save_dir='save'):
         model = AutoAWQForCausalLM.from_pretrained(
             model_path, device_map="auto", use_cache=False
         )
-        model.quantize(tokenizer, quant_config=quant_config, apply_clip=False)
+        model.quantize(tokenizer, quant_config=quant_config, apply_clip=True)
         model.save_quantized(save_dir)
 
 
@@ -360,8 +360,8 @@ if __name__ == '__main__':
     df_params = df_params.replace({float('nan'): None})
     df_results = []
     for params in df_params.to_dict(orient='records'):
+        print(Fore.RED, Back.YELLOW, params, Style.RESET_ALL)
         while True:
-            print(Fore.RED, Back.YELLOW, params, Style.RESET_ALL)
             try:
                 params['results'] = manager.dict()
                 params['results']['__redo__'] = False
