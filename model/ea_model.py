@@ -177,6 +177,7 @@ class EaModel(nn.Module):
             if output_orig:
                 orig = self.base_model.lm_head(outputs[0])
             hidden_states = outputs[0].clone()
+
         if init:
             if logits_processor is not None:
                 logits = orig[:, -1]
@@ -193,6 +194,7 @@ class EaModel(nn.Module):
             # hidden_states: [B, L, 4096]
             # input_ids: [B, L]
             # ea_logits: (torch.cat(ss_token),torch.cat(ss_prob),ss_op)
+            #print('ea_model.forward() topK_genrate')
             ea_logits = self.ea_layer.topK_genrate(hidden_states, input_ids, self.base_model.lm_head, logits_processor)
             # ea_logits[0]: [1+4+4+1+1=11, topk=10] where 11 is the draft token tree non-leaf size
 
@@ -452,6 +454,7 @@ class EaModel(nn.Module):
             time_stats.push('#new tokens per iteration', accept_length.item() + 1)
 
             last_input_ids = input_ids
+            # calling cnets::topK_genrate() in update_inference_inputs (model/utils.py)
             input_ids, tree_logits, new_token, hidden_state, sample_token = update_inference_inputs(
                 input_ids,
                 candidates,

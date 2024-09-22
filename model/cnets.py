@@ -573,6 +573,8 @@ class Model(nn.Module):
 
         if past_key_values is not None:
             past_key_values_length = past_key_values[0][0].shape[2]
+            #print(past_key_values_length, hidden_states.shape)
+
             seq_length_with_past = seq_length_with_past + past_key_values_length
         if position_ids is None:
             device = hidden_states.device if hidden_states is not None else inputs_embeds.device
@@ -784,6 +786,7 @@ class Model(nn.Module):
             # hidden_states: [1, L, 4096]
             # out_hidden: [1, L, 4096]
 
+            # save stable kv cache!
             self.stable_kv=past_key_values
 
             # take out the last hidden!

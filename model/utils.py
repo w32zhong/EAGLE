@@ -524,6 +524,7 @@ def update_inference_inputs(
 
     # after init=True, this gets called recurrently.
     time_stats.start('tree_drafting')
+    #print('update_inference_inputs() topK_genrate')
     tree_logits = model.ea_layer.topK_genrate(accept_hidden_state_new,
                                               input_ids=torch.cat((input_ids, token.to(input_ids.device)), dim=1),
                                               head=model.base_model.lm_head, logits_processor=logits_processor)
