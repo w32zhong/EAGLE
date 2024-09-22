@@ -548,7 +548,7 @@ class Model(nn.Module):
     def forward(
         self,
         hidden_states,
-        input_ids,
+        input_ids, # input tokens shift to one-position right
         attention_mask: Optional[torch.Tensor] = None,
         position_ids: Optional[torch.LongTensor] = None,
         past_key_values: Optional[List[torch.FloatTensor]] = None,

@@ -289,7 +289,7 @@ def getkacc(model, data, head, max_length=5):
 
 
 if train_config["data_noise"]:
-    if train_config["noise"] == "uniform":
+    if train_config["noise"] == "uniform": # default is U(u=0, std=0.2)
         aug = AddUniformNoise(std=train_config["std"])
     else:
         aug = AddGaussianNoise(mean=train_config["mean"], std=train_config["std"])
@@ -302,6 +302,8 @@ traindatapath = datapath[:int(len(datapath) * 0.95)]
 testdatapath = datapath[int(len(datapath) * 0.95):]
 # print('td',train_config["datapath"])
 # print(datapath)
+# print(traindatapath)
+# print(testdatapath)
 # exit()
 traindataset = CustomDataset(traindatapath, transform=aug)
 testdataset = CustomDataset(testdatapath)
@@ -347,12 +349,16 @@ for epoch in [0]:
 
         with accelerator.accumulate(model):
             optimizer.zero_grad()
+            # data['input_ids'].shape = torch.Size([1, 805])
+            # data["hidden_states"].shape = torch.Size([1, 805, 4096])
+            # data['attention_mask'].shape = torch.Size([1, 805])
             predict = model(data["hidden_states"], input_ids=data["input_ids"], attention_mask=data["attention_mask"])
+            # predict.shape = torch.Size([1, 805, 4096])
             with torch.no_grad():
-                target_head = head(data["target"])
+                target_head = head(data["target"]) # torch.Size([1, 805, 32000])
                 target_p = nn.Softmax(dim=2)(target_head)
                 target_p = target_p.detach()
-            out_head = head(predict)
+            out_head = head(predict) # torch.Size([1, 805, 32000])
             out_logp = nn.LogSoftmax(dim=2)(out_head)
             loss_mask = data["loss_mask"][:, :, None]
             plogp = target_p * out_logp
@@ -374,6 +380,7 @@ for epoch in [0]:
             wandb.log(logdict)
 
         del ploss, vloss
+
 if accelerator.is_local_main_process:
     accelerator.save_model(model, f"checkpoints/model")
     accelerator.save_state(output_dir=f"{args.cpdir}/state")
