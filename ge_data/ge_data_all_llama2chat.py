@@ -5,12 +5,9 @@ parser = argparse.ArgumentParser(description='sp')
 parser.add_argument('--start', type=int, default=0)
 parser.add_argument('--end', type=int, default=100)
 parser.add_argument('--index', type=int, default=1)
-parser.add_argument('--gpu_index', type=int, nargs='+', default=[0])
 parser.add_argument('--outdir', type=str, default='outdir0')
 args = parser.parse_args()
 import os
-
-os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu_index)[1:-1]
 import torch
 import torch.nn.functional as F
 from tqdm import tqdm
@@ -19,10 +16,8 @@ from datasets import load_dataset
 import json
 from fastchat.model.model_adapter import get_conversation_template
 
-bigname="NousResearch/Llama-2-7b-chat-hf"
-# bigname = "/home/lyh/weights/hf/llama/7B/"
-# smallname = "/home/lyh/weights/hf/llama/7B/"
-
+#bigname="NousResearch/Llama-2-7b-chat-hf"
+bigname="meta-llama/Llama-2-7b-chat-hf"
 
 
 def longest_common_prefix(list1, list2):
@@ -156,10 +151,11 @@ def build_dataset_rank(
     # dst.set_format(type="torch")
     return ds1
 
-bigtokenizer = AutoTokenizer.from_pretrained(bigname,use_fast=False)
+bigtokenizer = AutoTokenizer.from_pretrained(bigname, use_fast=False)
 ds = build_dataset_rank(bigtokenizer)
 print(ds)
-bigmodel = AutoModelForCausalLM.from_pretrained(bigname, device_map="auto", load_in_8bit=True)
+print('CUDA_VISIBLE_DEVICES:', os.environ["CUDA_VISIBLE_DEVICES"])
+bigmodel = AutoModelForCausalLM.from_pretrained(bigname, device_map="auto", load_in_8bit=False, torch_dtype=torch.bfloat16)
 bigmodel.eval()
 
 @torch.no_grad()

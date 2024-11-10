@@ -1,4 +1,5 @@
 transformers==4.35
+huggingface-hub==0.26
 accelerate
 fschat
 gradio
