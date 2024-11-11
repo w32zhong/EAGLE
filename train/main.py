@@ -34,7 +34,7 @@ train_config = {
     "mean": 0.0,
     "std": 0.2,
     "residual": "true,norm",
-    "max_len": 2048,
+    "max_len": args.max_train_length,
     # During training, truncating the training sequences means that the larger the setting, the more training data is used, and the better the effect, but it also consumes more VRAM.
     "config_path": args.configpath,
     "b1": 0.9,
@@ -342,10 +342,10 @@ else:
     model, head, optimizer, train_loader, test_loader = accelerator.prepare(
         model, head, optimizer, train_loader, test_loader
     )
-# accelerator.load_state("checkpoints/state_5")
-if accelerator.is_local_main_process:
-    accelerator.save_model(model, f"checkpoints/pretrain_model")
-    accelerator.save_state(output_dir=f"{args.cpdir}/pretrain_state")
+# accelerator.load_state(f"{args.cpdir}/state_5")
+#if accelerator.is_local_main_process:
+#    accelerator.save_model(model, f"{args.cpdir}/pretrain_model")
+#    accelerator.save_state(output_dir=f"{args.cpdir}/pretrain_state")
 
 for epoch in range(args.n_epochs):
     model.train()
@@ -354,11 +354,11 @@ for epoch in range(args.n_epochs):
         with accelerator.accumulate(model):
             optimizer.zero_grad()
 
-            hidden_states = data["hidden_states"][:, :args.max_train_length, :]
-            input_ids = data["input_ids"][:, :args.max_train_length]
-            attention_mask = data["attention_mask"][:, :args.max_train_length]
-            target = data["target"][:, :args.max_train_length, :]
-            loss_mask = data["loss_mask"][:, :args.max_train_length]
+            hidden_states = data["hidden_states"]
+            input_ids = data["input_ids"]
+            attention_mask = data["attention_mask"]
+            target = data["target"]
+            loss_mask = data["loss_mask"]
 
             predict = model(hidden_states, input_ids=input_ids, attention_mask=attention_mask)
             # predict.shape = torch.Size([1, 805, 4096])
@@ -390,6 +390,6 @@ for epoch in range(args.n_epochs):
 
         del ploss, vloss
 
-if accelerator.is_local_main_process:
-    accelerator.save_model(model, f"checkpoints/model")
-    accelerator.save_state(output_dir=f"{args.cpdir}/state")
+    if accelerator.is_local_main_process:
+        accelerator.save_model(model, f"{args.cpdir}/model-ep{epoch}")
+        accelerator.save_state(output_dir=f"{args.cpdir}/state-ep{epoch}")
