@@ -6,6 +6,7 @@ parser.add_argument('--configpath', type=str, default="config.json")
 parser.add_argument('--lr', type=float, default=3e-5)
 parser.add_argument('--bs', type=int, default=2)
 parser.add_argument('--max_train_length', type=int, default=2048)
+parser.add_argument('--n_epochs', type=int, default=8)
 parser.add_argument('--report_to', type=str, default=None)
 parser.add_argument('--gradient-accumulation-steps', type=int, default=8)
 parser.add_argument('--tmpdir', type=str, default='0')
@@ -346,7 +347,7 @@ if accelerator.is_local_main_process:
     accelerator.save_model(model, f"checkpoints/pretrain_model")
     accelerator.save_state(output_dir=f"{args.cpdir}/pretrain_state")
 
-for epoch in [0]:
+for epoch in range(args.n_epochs):
     model.train()
     for batch_idx, data in enumerate(tqdm(train_loader)):
 
