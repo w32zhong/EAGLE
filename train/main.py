@@ -1,3 +1,4 @@
+import random
 import argparse
 
 parser = argparse.ArgumentParser(description='sp')
@@ -139,22 +140,29 @@ class CustomDataset(Dataset):
     def __init__(self, datapath, transform=None):
         self.data = datapath
         self.transform = transform
+        self.skip_data = 0
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, index):
-        # try:
-        data = torch.load(self.data[index])
-        new_data = {}
-        hidden_state = data['hidden_state'][:train_config["max_len"]][None, :]
-        input_ids = data['input_ids'][:train_config["max_len"]][None, :]
-        loss_mask = data["loss_mask"][:train_config["max_len"]][None, :]
+        while True:
+            if index + self.skip_data >= len(self.data):
+                index = random.randrange(len(self.data))
+                print('[overflow skip]')
+                continue
+            data = torch.load(self.data[index + self.skip_data])
+            hidden_state = data['hidden_state'][:train_config["max_len"]][None, :]
+            input_ids = data['input_ids'][:train_config["max_len"]][None, :]
+            loss_mask = data["loss_mask"][:train_config["max_len"]][None, :]
 
-        # except:
-        #     with open("error_path.txt", "w") as file:
-        #         file.write(self.data[index])
-        #     print('error path',self.data[index])
+            ones = (loss_mask == 1).sum(dim=-1)
+            if torch.any(ones == 0).item():
+                self.skip_data += 1
+                print('[all-zero skip]')
+                continue
+            else:
+                break
 
         length = hidden_state.shape[1]
         # length_q = data['query_ids'].shape[1]
@@ -170,14 +178,12 @@ class CustomDataset(Dataset):
         zeropadding = torch.zeros(1, 1, target.shape[2])
         target = torch.cat((target, zeropadding), dim=1)
         loss_mask[-1] = 0
+        new_data = {}
         new_data["attention_mask"] = attention_mask
         new_data["loss_mask"] = loss_mask
         new_data["target"] = target
         new_data["hidden_state_big"] = hidden_state
         new_data["input_ids"] = input_ids_target
-        # sample = torch.cat((data['xs'],data['xb']))
-        # sample=torch.cat((self.data[index]['x'],self.data[index]['logits']))
-        # label = data['y']
 
         if self.transform:
             new_data = self.transform(new_data)
@@ -316,8 +322,6 @@ train_loader = DataLoader(traindataset, batch_size=train_config["bs"], shuffle=T
                           pin_memory=True)
 test_loader = DataLoader(testdataset, batch_size=train_config["bs"], shuffle=False,
                          collate_fn=DataCollatorWithPadding(), num_workers=train_config["num_workers"], pin_memory=True)
-# for batch_data in train_loader:
-#     print(batch_data)
 
 if accelerator.is_main_process:
     if not os.path.exists(args.cpdir):
