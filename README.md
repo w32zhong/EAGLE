@@ -184,7 +184,11 @@ ls -1v mnt/1/ | tail -f
 ### Train the Auto-regression Head
 ```bash
 cd train
-accelerate launch --mixed_precision=bf16 main.py --tmpdir ../data/prepared_train_data/ --cpdir . --configpath ./llama_2_chat_7B_config.json --basepath ~/.cache/huggingface/hub/models--NousResearch--Llama-2-7b-chat-hf/snapshots/37892f30c23786c0d5367d80481fa0d9fba93cf8/ --gradient-accumulation-steps 8 --bs 2 --report_to wandb --max_train_length 2048 # on 2x3060: accum=16, bs=1, max_train_length=1024
+# on 2x3060
+accelerate launch --mixed_precision=bf16 main.py --tmpdir ../mnt/1/ --cpdir . --configpath ./llama_2_chat_7B_config.json --basepath ~/.cache/huggingface/hub/models--meta-llama--Llama-2-7b-chat-hf/snapshots/f5db02db724555f92da89c216ac04704f23d4590/ --gradient-accumulation-steps 16 --bs 1 --report_to wandb --max_train_length 1024
+
+# on 1xa10g
+accelerate launch --mixed_precision=bf16 main.py --tmpdir ../../host/output/eagle_train_data/1/ --cpdir . --configpath ./llama_2_chat_7B_config.json --basepath ~/.cache/huggingface/hub/models--meta-llama--Llama-2-7b-chat-hf/snapshots/f5db02db724555f92da89c216ac04704f23d4590/ --gradient-accumulation-steps 8 --bs 2 --report_to wandb --max_train_length 2048
 ```
 ## Evaluation
 You can test the speed of EAGLE on MT-bench using the following command.
