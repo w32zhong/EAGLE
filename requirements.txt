@@ -8,3 +8,4 @@ anthropic
 sentencepiece
 protobuf
 bitsandbytes
+wandb
