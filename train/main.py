@@ -5,6 +5,8 @@ parser.add_argument('--basepath', type=str, default='/home/lyh/weights/hf/vicuna
 parser.add_argument('--configpath', type=str, default="config.json")
 parser.add_argument('--lr', type=float, default=3e-5)
 parser.add_argument('--bs', type=int, default=2)
+parser.add_argument('--max_train_length', type=int, default=2048)
+parser.add_argument('--report_to', type=str, default=None)
 parser.add_argument('--gradient-accumulation-steps', type=int, default=8)
 parser.add_argument('--tmpdir', type=str, default='0')
 parser.add_argument('--outdir', type=str, default='0')
@@ -66,8 +68,9 @@ import numpy as np
 from transformers import get_constant_schedule_with_warmup, AutoConfig
 
 if accelerator.is_main_process:
-    import wandb
-    wandb.init(project="s3d", name='EAGLE', config=train_config)
+    if args.report_to == 'wandb':
+        import wandb
+        wandb.init(project="eagle", config=train_config)
 
 baseconfig = AutoConfig.from_pretrained(args.basepath)
 
@@ -349,21 +352,25 @@ for epoch in [0]:
 
         with accelerator.accumulate(model):
             optimizer.zero_grad()
-            # data['input_ids'].shape = torch.Size([1, 805])
-            # data["hidden_states"].shape = torch.Size([1, 805, 4096])
-            # data['attention_mask'].shape = torch.Size([1, 805])
-            predict = model(data["hidden_states"], input_ids=data["input_ids"], attention_mask=data["attention_mask"])
+
+            hidden_states = data["hidden_states"][:, :args.max_train_length, :]
+            input_ids = data["input_ids"][:, :args.max_train_length]
+            attention_mask = data["attention_mask"][:, :args.max_train_length]
+            target = data["target"][:, :args.max_train_length, :]
+            loss_mask = data["loss_mask"][:, :args.max_train_length]
+
+            predict = model(hidden_states, input_ids=input_ids, attention_mask=attention_mask)
             # predict.shape = torch.Size([1, 805, 4096])
             with torch.no_grad():
-                target_head = head(data["target"]) # torch.Size([1, 805, 32000])
+                target_head = head(target) # torch.Size([1, 805, 32000])
                 target_p = nn.Softmax(dim=2)(target_head)
                 target_p = target_p.detach()
             out_head = head(predict) # torch.Size([1, 805, 32000])
             out_logp = nn.LogSoftmax(dim=2)(out_head)
-            loss_mask = data["loss_mask"][:, :, None]
+            loss_mask = loss_mask[:, :, None]
             plogp = target_p * out_logp
             ploss = -torch.sum(torch.sum(loss_mask * plogp, 2)) / loss_mask.sum()
-            vloss = criterion(predict, data["target"])
+            vloss = criterion(predict, target)
             vloss = torch.sum(torch.mean(loss_mask * vloss, 2)) / loss_mask.sum()
             loss = train_config["v_w"] * vloss + train_config["p_w"] * ploss
             # loss.backward()
@@ -377,7 +384,8 @@ for epoch in [0]:
             logdict = {"train/lr": optimizer.optimizer.param_groups[0]["lr"], "train/vloss": vloss.item(),
                        "train/ploss": ploss.item(), "train/loss": loss.item()}
             print(logdict)
-            wandb.log(logdict)
+            if args.report_to == 'wandb':
+                wandb.log(logdict)
 
         del ploss, vloss
 
