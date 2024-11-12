@@ -24,8 +24,12 @@ def test_eagle(bits, random_top_layer=False, quantize_top_layer=False):
         raise NotImplemented
 
     model = EaModel.from_pretrained(
-        base_model_path='NousResearch/Llama-2-7b-chat-hf',
-        ea_model_path='yuhuili/EAGLE-llama2-chat-7B',
+        #base_model_path='NousResearch/Llama-2-7b-chat-hf',
+        #ea_model_path='yuhuili/EAGLE-llama2-chat-7B',
+
+        base_model_path='meta-llama/Llama-2-7b-chat-hf',
+        ea_model_path='w32zhong/eagle-2ep-vibrant-morning',
+
         #ea_model_path='w32zhong/s3d-EAGLE-retrain-20K',
         torch_dtype=torch.float16,
         random_top_layer=random_top_layer,
@@ -59,10 +63,10 @@ def test_vanilla(bits):
         kwargs = dict(device_map='auto')
     else:
         raise NotImplemented
-    tokenizer = AutoTokenizer.from_pretrained('NousResearch/Llama-2-7b-chat-hf')
+    tokenizer = AutoTokenizer.from_pretrained('meta-llama/Llama-2-7b-chat-hf')
     inputs = tokenizer([prompt], return_tensors="pt").to('cuda:0')
     model = AutoModelForCausalLM.from_pretrained(
-        'NousResearch/Llama-2-7b-chat-hf', trust_remote_code=True,
+        'meta-llama/Llama-2-7b-chat-hf', trust_remote_code=True,
         torch_dtype=torch.float16, **kwargs
     )
     model.eval()
@@ -91,26 +95,31 @@ def test(method, bits, random_top_layer, quantize_top_layer, results={}):
 
 
 if __name__ == '__main__':
-    import pandas as pd
-    import multiprocessing
-    from colorama import Fore, Back, Style
-    manager = multiprocessing.Manager()
-    df_params = pd.read_csv('params.tsv', sep='\t', header=0)
-    df_results = []
-    for params in df_params.to_dict(orient='records'):
-        print(Fore.RED, Back.YELLOW, params, Style.RESET_ALL)
-        try:
-            params['results'] = manager.dict()
-            process = multiprocessing.Process(target=test, kwargs=params)
-            process.start()
-            process.join()
-        except:
-            process.terminate()
-            break
-        results = dict(params['results'])
-        print(Fore.RED, Back.YELLOW, results, Style.RESET_ALL, end='\n\n')
-        df_results.append(results)
-    df_results = pd.DataFrame(df_results)
-    df_output = df_params.join(df_results)
-    print(df_output)
-    df_output.to_csv('output.tsv', sep='\t', index=False)
+    # import pandas as pd
+    # import multiprocessing
+    # from colorama import Fore, Back, Style
+    # manager = multiprocessing.Manager()
+    # df_params = pd.read_csv('params.tsv', sep='\t', header=0)
+    # df_results = []
+    # for params in df_params.to_dict(orient='records'):
+    #     print(Fore.RED, Back.YELLOW, params, Style.RESET_ALL)
+    #     try:
+    #         params['results'] = manager.dict()
+    #         process = multiprocessing.Process(target=test, kwargs=params)
+    #         process.start()
+    #         process.join()
+    #     except:
+    #         process.terminate()
+    #         break
+    #     results = dict(params['results'])
+    #     print(Fore.RED, Back.YELLOW, results, Style.RESET_ALL, end='\n\n')
+    #     df_results.append(results)
+    # df_results = pd.DataFrame(df_results)
+    # df_output = df_params.join(df_results)
+    # print(df_output)
+    # df_output.to_csv('output.tsv', sep='\t', index=False)
+
+    results = {}
+    #test('vanilla', 16, False, False, results)
+    test('eagle', 16, False, False, results)
+    print(results)

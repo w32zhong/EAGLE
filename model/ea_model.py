@@ -96,7 +96,10 @@ class EaModel(nn.Module):
 
         configpath=os.path.join(ea_model_path,"config.json")
         if not os.path.exists(configpath):
-            configpath = hf_hub_download(ea_model_path, "config.json")
+            try:
+                configpath = hf_hub_download(ea_model_path, "config.json")
+            except:
+                configpath = './fallback_config.json'
         model = cls(
             base_model,
             base_model_path,
