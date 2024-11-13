@@ -19,6 +19,8 @@ from fastchat.model.model_adapter import get_conversation_template
 #bigname="NousResearch/Llama-2-7b-chat-hf"
 bigname="meta-llama/Llama-2-7b-chat-hf"
 
+targets = ['oM7QCY2_0', 'efVCaLN_0']
+
 
 def longest_common_prefix(list1, list2):
     prefix_length = 0
@@ -44,6 +46,9 @@ def build_dataset_rank(
     )["train"]
     ds = ds.shuffle(seed=42)
     ds1 = ds.select(range(args.start, args.end))
+
+    if targets:
+        ds1 = ds1.filter(lambda x: x['id'] in targets)
     # ds1 = ds.select(range(100,200))
     # dst=ds.select(range(200,300))
     # ds2=ds.select(range(300,len(ds)))
@@ -154,7 +159,6 @@ def build_dataset_rank(
 bigtokenizer = AutoTokenizer.from_pretrained(bigname, use_fast=False)
 ds = build_dataset_rank(bigtokenizer)
 print(ds)
-print('CUDA_VISIBLE_DEVICES:', os.environ["CUDA_VISIBLE_DEVICES"])
 bigmodel = AutoModelForCausalLM.from_pretrained(bigname, device_map="auto", load_in_8bit=False, torch_dtype=torch.bfloat16)
 bigmodel.eval()
 

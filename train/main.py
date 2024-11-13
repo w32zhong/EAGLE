@@ -310,7 +310,7 @@ else:
 
 datapath = list_files(train_config["datapath"])
 
-traindatapath = datapath[:int(len(datapath) * 0.95)]
+traindatapath = datapath[:int(len(datapath) * 1)]
 testdatapath = datapath[int(len(datapath) * 0.95):]
 # print('td',train_config["datapath"])
 # print(datapath)
@@ -359,7 +359,7 @@ for epoch in range(args.n_epochs):
         # for input_id, ans_mask in zip(
         #   data['input_ids'][-1].tolist(), data['loss_mask'][-1].tolist()):
         #     print(tokenizer.decode([input_id]), ans_mask)
-        # breakpoint()
+        breakpoint()
         # p tokenizer.batch_decode(data['input_ids'])[-1]
         # p data['input_ids'].shape [2, 587]
         # p data['hidden_states'].shape [2, 587, 4096]

@@ -180,6 +180,9 @@ cd ge_data/
 # Instead of: python allocation.py --outdir ../data/
 python ge_data_all_llama2chat.py --start=0 --end=68623 --outdir ../data
 ls -1v mnt/1/ | tail -f
+
+# modify and set specific `targets`
+python ge_data_all_llama2chat.py --start=0 --end=68623 --outdir ../mnt --index 2
 ```
 ### Train the Auto-regression Head
 ```bash
