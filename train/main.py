@@ -44,6 +44,8 @@ train_config = {
 }
 import json
 from safetensors import safe_open
+from transformers import AutoTokenizer
+tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-chat-hf")
 # from transformers import AutoModelForCausalLM, AutoTokenizer,AutoModelForSequenceClassification
 import os
 # os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
@@ -354,6 +356,16 @@ else:
 for epoch in range(args.n_epochs):
     model.train()
     for batch_idx, data in enumerate(tqdm(train_loader)):
+        # for input_id, ans_mask in zip(
+        #   data['input_ids'][-1].tolist(), data['loss_mask'][-1].tolist()):
+        #     print(tokenizer.decode([input_id]), ans_mask)
+        # breakpoint()
+        # p tokenizer.batch_decode(data['input_ids'])[-1]
+        # p data['input_ids'].shape [2, 587]
+        # p data['hidden_states'].shape [2, 587, 4096]
+        # p data['target'].shape [2, 587, 4096]
+        # p data['attention_mask'][-1]
+        # p data['loss_mask'][-1]
 
         with accelerator.accumulate(model):
             optimizer.zero_grad()
