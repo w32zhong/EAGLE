@@ -54,7 +54,7 @@ def build_dataset_rank(
     # ds2=ds.select(range(300,len(ds)))
     original_columns1 = ds1.column_names
     # original_columns2 = ds2.column_names
-    num_proc = 4
+    num_proc = 1 #4
 
     def preprocess_function(examples):
         new_examples = {
@@ -79,12 +79,19 @@ def build_dataset_rank(
                     sentence["value"]=" "+sentence["value"]
                 conv.append_message(role, sentence["value"])
             conversation=conv.get_prompt()
-            # if i==56:
-            #     print(i)
-            # if i==57:
-            #     print(i)
+
             if not tokenizer.pad_token_id:
                 tokenizer.pad_token_id=tokenizer.unk_token_id
+
+            ### NEW ###
+            debug_messages = []
+            for j, sentence in enumerate(source):
+                if sentence["from"]=="gpt":
+                    debug_messages.append({"role": "assistant", "content": sentence["value"]})
+                else:
+                    debug_messages.append({"role": "user", "content": sentence["value"]})
+            conversation=tokenizer.apply_chat_template(debug_messages, tokenize=False)
+            ### END ###
 
             input_ids = tokenizer(
                 conversation,
