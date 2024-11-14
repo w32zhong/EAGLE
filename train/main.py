@@ -30,7 +30,7 @@ train_config = {
     "num_workers": 2,
     "embeding": True,
     "act": "No",
-    "data_noise": True,
+    "data_noise": False, #True,
     "noise": "uniform",
     "mean": 0.0,
     "std": 0.2,
@@ -332,6 +332,10 @@ if accelerator.is_main_process:
 config = EConfig.from_pretrained(train_config["config_path"])
 model = Model(config, load_emb=True, path=args.basepath)
 
+#torch.save(model.state_dict(),'state_dict.pth')
+#print(model.state_dict().keys())
+#model.load_state_dict(torch.load("state_dict.pth"), strict=True)
+
 criterion = nn.SmoothL1Loss(reduction="none")
 optimizer = optim.AdamW(model.parameters(), lr=train_config["lr"], betas=(train_config["b1"], train_config["b2"]))
 
@@ -359,7 +363,6 @@ for epoch in range(args.n_epochs):
         # for input_id, ans_mask in zip(
         #   data['input_ids'][-1].tolist(), data['loss_mask'][-1].tolist()):
         #     print(tokenizer.decode([input_id]), ans_mask)
-        breakpoint()
         # p tokenizer.batch_decode(data['input_ids'])[-1]
         # p data['input_ids'].shape [2, 587]
         # p data['hidden_states'].shape [2, 587, 4096]
@@ -385,6 +388,9 @@ for epoch in range(args.n_epochs):
             out_head = head(predict) # torch.Size([1, 805, 32000])
             out_logp = nn.LogSoftmax(dim=2)(out_head)
             loss_mask = loss_mask[:, :, None]
+            #print(target_head)
+            #print(out_head)
+            #print(loss_mask.squeeze().int().cumsum(-1))
             plogp = target_p * out_logp
             ploss = -torch.sum(torch.sum(loss_mask * plogp, 2)) / loss_mask.sum()
             vloss = criterion(predict, target)

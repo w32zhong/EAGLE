@@ -465,7 +465,7 @@ class Model(nn.Module):
 
 
 
-        self.gradient_checkpointing = True
+        self.gradient_checkpointing = False
         self.padding_idx = config.pad_token_id
         self.vocab_size = config.vocab_size
 
@@ -496,7 +496,8 @@ class Model(nn.Module):
         #self.init_tree()
         print('\n\nEAGLE layers:', config.num_hidden_layers)
 
-        self.layers = nn.ModuleList([LlamaDecoderLayer(config,index) for index in range(config.num_hidden_layers)])
+        #self.layers = nn.ModuleList([LlamaDecoderLayer(config,index) for index in range(config.num_hidden_layers)])
+        self.layers = nn.ModuleList([LlamaDecoderLayer(config,123) for index in range(config.num_hidden_layers)])
         self.fc=nn.Linear(2*config.hidden_size,config.hidden_size,bias=bias)
         self.act=ACT2FN[config.hidden_act]
         for param in self.embed_tokens.parameters():
