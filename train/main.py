@@ -179,6 +179,8 @@ class CustomDataset(Dataset):
         target = hidden_state[:, 1:, :]
         zeropadding = torch.zeros(1, 1, target.shape[2])
         target = torch.cat((target, zeropadding), dim=1)
+        # target = hidden_state[1:] + [0]
+
         loss_mask[-1] = 0
         new_data = {}
         new_data["attention_mask"] = attention_mask
@@ -373,19 +375,18 @@ for epoch in range(args.n_epochs):
         with accelerator.accumulate(model):
             optimizer.zero_grad()
 
-            hidden_states = data["hidden_states"]
-            input_ids = data["input_ids"]
-            attention_mask = data["attention_mask"]
-            target = data["target"]
-            loss_mask = data["loss_mask"]
+            hidden_states = data["hidden_states"] # [1, 1024, 4096]
+            input_ids = data["input_ids"] # [1, 1024]
+            attention_mask = data["attention_mask"] # [1, 1024]
+            target = data["target"] # [1, 1024, 4096]
+            loss_mask = data["loss_mask"] # [1, 1024]
 
             predict = model(hidden_states, input_ids=input_ids, attention_mask=attention_mask)
-            # predict.shape = torch.Size([1, 805, 4096])
             with torch.no_grad():
-                target_head = head(target) # torch.Size([1, 805, 32000])
+                target_head = head(target)
                 target_p = nn.Softmax(dim=2)(target_head)
                 target_p = target_p.detach()
-            out_head = head(predict) # torch.Size([1, 805, 32000])
+            out_head = head(predict)
             out_logp = nn.LogSoftmax(dim=2)(out_head)
             loss_mask = loss_mask[:, :, None]
             #print(target_head)
