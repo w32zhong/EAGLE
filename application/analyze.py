@@ -1,5 +1,5 @@
 import torch
-from random import randrange
+from random import randrange, seed
 from huggingface_hub import hf_hub_download
 import matplotlib.pyplot as plt
 import numpy
@@ -19,9 +19,11 @@ for key in state_dict.keys():
         bias = val
         print(val, val.shape)
 
-weight
+seed(42)
 col_idx = randrange(weight.shape[1])
+print(col_idx)
 col = weight[:, col_idx].cpu()
+# col = [tokens; hidden states]
 x = numpy.arange(len(col))
 
 plt.bar(x, col)
