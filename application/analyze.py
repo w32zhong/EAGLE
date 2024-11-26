@@ -2,6 +2,7 @@ import torch
 from random import randrange
 from huggingface_hub import hf_hub_download
 import matplotlib.pyplot as plt
+import numpy
 
 ea_model_path='yuhuili/EAGLE-llama2-chat-7B'
 path = hf_hub_download(ea_model_path, 'pytorch_model.bin')
@@ -20,7 +21,8 @@ for key in state_dict.keys():
 
 weight
 col_idx = randrange(weight.shape[1])
-col = weight[:, col_idx].unsqueeze(0).cpu()
+col = weight[:, col_idx].cpu()
+x = numpy.arange(len(col))
 
-plt.imshow( col ) 
-plt.show() 
+plt.bar(x, col)
+plt.show()
