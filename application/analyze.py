@@ -19,12 +19,13 @@ for key in state_dict.keys():
         bias = val
         print(val, val.shape)
 
-seed(42)
+seed(0)
 col_idx = randrange(weight.shape[1])
 print(col_idx)
 col = weight[:, col_idx].cpu()
 # col = [tokens; hidden states]
 x = numpy.arange(len(col))
 
+plt.title(f'downcast dim=8192, matrix dim={col_idx}/4096')
 plt.bar(x, col)
 plt.show()
