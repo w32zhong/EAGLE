@@ -191,24 +191,23 @@ class EaModel(nn.Module):
                 token = torch.argmax(orig[:, -1])
                 token = token[None, None]
 
-            # concate old input_ids with the new input_id
+            # concate input_ids with an initial verified input_id
             input_ids = torch.cat((input_ids, token.to(input_ids.device)), dim=1)
 
             # hidden_states: [B, L, 4096]
-            # input_ids: [B, L]
-            # ea_logits: (torch.cat(ss_token),torch.cat(ss_prob),ss_op)
-            #print('ea_model.forward() topK_genrate')
-            ea_logits = self.ea_layer.topK_genrate(hidden_states, input_ids, self.base_model.lm_head, logits_processor)
-            # ea_logits[0]: [1+4+4+1+1=11, topk=10] where 11 is the draft token tree non-leaf size
+            # input_ids: [B, L+1]
+            # topK_genrate_res: (torch.cat(ss_token),torch.cat(ss_prob),ss_op)
+            topK_genrate_res = self.ea_layer.topK_genrate(hidden_states, input_ids, self.base_model.lm_head, logits_processor)
+            # topK_genrate_res[0]: [1+4+4+1+1=11, topk=10] where 11 is the draft token tree non-leaf size
 
             #interact
             #self.tokenizer.decode(input_ids[0])
-            #for i in range(len(ea_logits[0])):
-            #    print(i, [self.tokenizer.decode([t]) for t in ea_logits[0][i]])
+            #for i in range(len(topK_genrate_res[0])):
+            #    print(i, [self.tokenizer.decode([t]) for t in topK_genrate_res[0][i]])
 
             if output_orig:
-                return ea_logits, outputs, orig, hidden_states, token
-            return ea_logits, hidden_states, token
+                return topK_genrate_res, outputs, orig, hidden_states, token
+            return topK_genrate_res, hidden_states, token
         else:
             if output_orig:
                 return outputs, orig, hidden_states
@@ -401,7 +400,7 @@ class EaModel(nn.Module):
             input_ids, self, tree_buffers["tree_attn_mask"], past_key_values, logits_processor
         )
         # input_ids: [1, L]
-        # tree_logits: ([11, 10], [11, 10], [None, None, None, None, None])
+        # tree_logits: ([11, top10], [11, top10], [None, None, None, None, None])
         # logits: [1, L, 32000]
         # hidden_state: [1, L, 4096]
         # sample_token: [1, 1]

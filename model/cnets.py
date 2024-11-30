@@ -808,7 +808,7 @@ class Model(nn.Module):
             # tree_buffer['tree_indices'] here is
             # [[0, 1, 2, 3], [ 0,  1,  2, 10], [0], [0]]
             # of length depth, each represent the rank of an internal/non-leaf node
-            # in the imaginary 10-ary draft tree.
+            # in the imaginary top-10-ary draft tree.
             for i in range(len(self.tree_buffer['tree_indices'])):
                 # i loops over all non-leaf depths
                 if logits_processor is not None:
