@@ -418,7 +418,7 @@ class EaModel(nn.Module):
                 logits_processor
             )
             # candidates of size [15, 6] represents possible leaf-root paths
-            # tree_candidates of size [26], a draft tree of vocabularies
+            # tree_candidates of size [26], represents the filled draft tree
 
             # p self.tokenizer.decode(sample_token[0])
             # p self.tokenizer.decode(tree_candidates[0])
