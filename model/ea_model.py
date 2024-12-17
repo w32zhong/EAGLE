@@ -367,6 +367,7 @@ class EaModel(nn.Module):
 
         for idx in range(max_length):
             time_stats.start('ea_generate iteration')
+
             candidates, cart_candidates_prob, tree_candidates = generate_candidates(
                 tree_logits,
                 tree_buffers["tree_indices"],
@@ -386,8 +387,8 @@ class EaModel(nn.Module):
             # which returns (outputs, orig, hidden_states)
 
             cur_len, past_len = tree_candidates.shape[-1], past_key_values[0][0].current_length
-            time_stats.push('cur_len', cur_len)
-            time_stats.push('past_len', past_len.item())
+            #time_stats.push('cur_len', cur_len)
+            #time_stats.push('past_len', past_len.item())
 
             time_stats.start('ea_generate verify forward')
             logits, hidden_state_new, outputs = tree_decoding(
