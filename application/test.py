@@ -8,16 +8,17 @@ import transformers
 print(transformers.__path__)
 
 model = EaModel.from_pretrained(
-    base_model_path='NousResearch/Llama-2-7b-chat-hf',
+    base_model_path='meta-llama/Llama-2-7b-chat-hf',
+    #base_model_path='NousResearch/Llama-2-7b-chat-hf',
     ea_model_path='yuhuili/EAGLE-llama2-chat-7B',
     #ea_model_path='w32zhong/s3d-EAGLE-retrain-20K',
-    torch_dtype=torch.float16,
+    torch_dtype=torch.bfloat16,
     #load_in_8bit=True,
     device_map="cuda:0"
 )
 model.eval()
 
-prompt = "[INST] How long does The Hundred Years' War last? [/INST] The"
+prompt = "[INST] How long does The Hundred Years' War last? describe the process. [/INST] The"
 input_ids = model.tokenizer([prompt], return_tensors="pt").input_ids
 input_ids = input_ids.to('cuda:0')
 past_len = input_ids.shape[1]
