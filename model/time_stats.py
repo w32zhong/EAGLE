@@ -1,5 +1,6 @@
 import time
 import json
+import torch
 import statistics
 from collections import defaultdict
 
@@ -13,9 +14,11 @@ class TimeStats():
         self._start = defaultdict(float)
 
     def start(self, key):
+        torch.cuda.synchronize()
         self._start[key] = time.time_ns()
 
     def stop(self, key, verbose=False):
+        torch.cuda.synchronize()
         dt = time.time_ns() - self._start[key]
         dt_ms = dt / 1_000_000
         self._hist[key].append(dt_ms)
