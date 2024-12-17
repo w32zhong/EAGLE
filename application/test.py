@@ -12,12 +12,12 @@ model = EaModel.from_pretrained(
     ea_model_path='yuhuili/EAGLE-llama2-chat-7B',
     #ea_model_path='w32zhong/s3d-EAGLE-retrain-20K',
     torch_dtype=torch.float16,
-    load_in_8bit=True,
+    #load_in_8bit=True,
     device_map="cuda:0"
 )
 model.eval()
 
-prompt = '[INST] tell me something interesting about the solar eclipse in April 2024. [/INST]'
+prompt = "[INST] How long does The Hundred Years' War last? [/INST] The"
 input_ids = model.tokenizer([prompt], return_tensors="pt").input_ids
 input_ids = input_ids.to('cuda:0')
 past_len = input_ids.shape[1]
@@ -34,5 +34,4 @@ for output_ids in model.ea_generate(input_ids, max_length=512):
 print()
 
 time_delta = time.time() - start_time
-cnt_tokens = len(decode_ids)
 print('e2e speed:', time_delta, cnt_tokens, cnt_tokens / time_delta)
