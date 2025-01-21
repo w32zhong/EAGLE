@@ -14,7 +14,7 @@ model = EaModel.from_pretrained(
     #ea_model_path='w32zhong/s3d-EAGLE-retrain-20K',
     torch_dtype=torch.bfloat16,
     #load_in_8bit=True,
-    device_map="cuda:0"
+    device_map="auto"
 )
 model.eval()
 
