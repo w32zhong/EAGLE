@@ -13,15 +13,15 @@ model = EaModel.from_pretrained(
     #ea_model_path='w32zhong/s3d-EAGLE-retrain-20K',
     torch_dtype=torch.float16,
     #load_in_8bit=True,
-    device_map="cuda:0"
+    device_map="auto"
 )
 model.eval()
 
-prompt = "[INST] How long does The Hundred Years' War last? [/INST] The"
+prompt = "[INST] Thomas is very healthy, but he has to go to the hospital every day. What could be the reasons? [/INST]"
 input_ids = model.tokenizer([prompt], return_tensors="pt").input_ids
 input_ids = input_ids.to('cuda:0')
+print(model.tokenizer.batch_decode(input_ids))
 past_len = input_ids.shape[1]
-print(prompt)
 start_time = time.time()
 cnt_tokens = 0
 for output_ids in model.ea_generate(input_ids, max_length=512):
