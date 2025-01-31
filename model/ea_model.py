@@ -19,6 +19,26 @@ from huggingface_hub import hf_hub_download
 from .time_stats import TimeStats
 
 
+def my_ckpt_convert(state_dict):
+    # eagle_fc -> fc
+    # model.embed_tokens -> embed_tokens
+    # del model.norm.*
+    # del lm_head.*
+    # speculative_decoder.input_layernorm -> layers.0.post_attention_layernorm
+    new_state_dict = dict()
+    for key, val in state_dict.items():
+        key = key.replace('eagle_fc', 'fc')
+        key = key.replace('model.embed_tokens', 'embed_tokens')
+        key = key.replace('speculative_decoder.input_layernorm', 'layers.0.post_attention_layernorm')
+        key = key.replace('speculative_decoder', 'layers.0')
+        if key.startswith('model.norm.'):
+            continue
+        elif key.startswith('lm_head.'):
+            continue
+        new_state_dict[key] = val
+    return new_state_dict
+
+
 class EaModel(nn.Module):
 
     def __init__(
@@ -105,11 +125,15 @@ class EaModel(nn.Module):
                 load_model_path=hf_hub_download(ea_model_path, "pytorch_model.bin")
             except:
                 from safetensors.torch import load_file
-                load_model_path=hf_hub_download(ea_model_path, "model.safetensors")
+                #load_model_path=hf_hub_download(ea_model_path, "model.safetensors")
+                load_model_path = os.path.join(ea_model_path, "model.safetensors")
                 ea_layer_state_dict = load_file(load_model_path, device='cuda:0')
+                ea_layer_state_dict = my_ckpt_convert(ea_layer_state_dict)
+                print('converted keys:', ea_layer_state_dict.keys())
 
         if ea_layer_state_dict is None:
             ea_layer_state_dict = torch.load(load_model_path, map_location=base_model.device)
+
         model.ea_layer.load_state_dict(ea_layer_state_dict, strict=True)
 
         return model
