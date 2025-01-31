@@ -24,17 +24,18 @@ def my_ckpt_convert(state_dict):
     # model.embed_tokens -> embed_tokens
     # del model.norm.*
     # del lm_head.*
-    # speculative_decoder.input_layernorm -> layers.0.post_attention_layernorm
+    # speculative_decoder.* -> layers.0.*
     new_state_dict = dict()
     for key, val in state_dict.items():
-        key = key.replace('eagle_fc', 'fc')
-        key = key.replace('model.embed_tokens', 'embed_tokens')
-        key = key.replace('speculative_decoder.input_layernorm', 'layers.0.post_attention_layernorm')
-        key = key.replace('speculative_decoder', 'layers.0')
         if key.startswith('model.norm.'):
             continue
         elif key.startswith('lm_head.'):
             continue
+        elif key.startswith('speculative_decoder.input_layernorm'):
+            continue
+        key = key.replace('eagle_fc', 'fc')
+        key = key.replace('model.embed_tokens', 'embed_tokens')
+        key = key.replace('speculative_decoder', 'layers.0')
         new_state_dict[key] = val
     return new_state_dict
 
