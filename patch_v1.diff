@@ -84,7 +84,7 @@ index eba6161..24d8086 100644
 +    outdata = ge(data)
 +    writedata(outdir,outdata,id)
 diff --git a/eagle/train/main.py b/eagle/train/main.py
-index 9cd152f..0dc3a56 100644
+index 9cd152f..85dd0cf 100644
 --- a/eagle/train/main.py
 +++ b/eagle/train/main.py
 @@ -67,8 +67,8 @@ from transformers import get_linear_schedule_with_warmup, AutoConfig
@@ -127,19 +127,24 @@ index 9cd152f..0dc3a56 100644
          data = torch.load(self.data[index])
          new_data = {}
          hidden_state = data['hidden_state'][:train_config["max_len"]][None, :]
-@@ -348,6 +356,11 @@ for epoch in range(num_epochs + 1):
+@@ -341,13 +349,15 @@ else:
+         model, head, optimizer, train_loader, test_loader
+     )
+ # accelerator.load_state("checkpoints/state_5")
+-for epoch in range(num_epochs + 1):
++for epoch in range(num_epochs):
++    print('epoch:', epoch, '/', num_epochs)
+     top_3acc = [0 for _ in range(3)]
+     correct = 0
+     total = 0
      epoch_loss = 0
      num_batches = 0
      model.train()
 +
-+    if accelerator.is_local_main_process:
-+        accelerator.save_model(model, f"{args.cpdir}/model_{epoch}")
-+        accelerator.save_state(output_dir=f"{args.cpdir}/state_{epoch}")
-+
      for batch_idx, data in enumerate(tqdm(train_loader)):
  
          with accelerator.accumulate(model):
-@@ -399,86 +412,86 @@ for epoch in range(num_epochs + 1):
+@@ -399,86 +409,90 @@ for epoch in range(num_epochs + 1):
          epoch_loss += loss.item()
          num_batches += 1
  
@@ -148,7 +153,7 @@ index 9cd152f..0dc3a56 100644
 -    correct, total = correct.sum().item(), total.sum().item()
 -    epoch_loss /= num_batches
 -    top_3acc = accelerator.gather_for_metrics(top_3acc)
--    if accelerator.is_local_main_process:
+     if accelerator.is_local_main_process:
 -        for id, i in enumerate(top_3acc):
 -            wandb.log({f'train/epochtop_{id + 1}_acc': i.sum().item() / total})
 -    if accelerator.is_local_main_process:
@@ -226,6 +231,9 @@ index 9cd152f..0dc3a56 100644
 -            # accelerator.save_state(output_dir=f"{args.outdir}/state_{epoch}")
 -            # os.system(f"cp -r {args.outdir} {args.cpdir}")
 -            accelerator.save_state(output_dir=f"{args.cpdir}/state_{epoch}")
++        accelerator.save_model(model, f"{args.cpdir}/model_{epoch}")
++        accelerator.save_state(output_dir=f"{args.cpdir}/state_{epoch}")
++
 +    #correct, total = torch.tensor(correct).cuda(), torch.tensor(total).cuda()
 +    #correct, total = accelerator.gather_for_metrics((correct, total))
 +    #correct, total = correct.sum().item(), total.sum().item()
