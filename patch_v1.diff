@@ -84,7 +84,7 @@ index eba6161..24d8086 100644
 +    outdata = ge(data)
 +    writedata(outdir,outdata,id)
 diff --git a/eagle/train/main.py b/eagle/train/main.py
-index 9cd152f..f6495b1 100644
+index 9cd152f..c0000d8 100644
 --- a/eagle/train/main.py
 +++ b/eagle/train/main.py
 @@ -67,8 +67,8 @@ from transformers import get_linear_schedule_with_warmup, AutoConfig
@@ -98,3 +98,32 @@ index 9cd152f..f6495b1 100644
  
  baseconfig = AutoConfig.from_pretrained(args.basepath)
  
+@@ -100,10 +100,19 @@ for param in head.parameters():
+ 
+ def list_files(path):
+     datapath = []
++    good, bad = 0, 0
+     for root, directories, files in os.walk(path):
+         for file in files:
+             file_path = os.path.join(root, file)
+-            datapath.append(file_path)
++            try:
++                data = torch.load(file_path)
++                datapath.append(file_path)
++                good += 1
++            except Exception as e:
++                if accelerator.is_local_main_process:
++                    print(e, file_path)
++                bad += 1
++    print('good/bad:', good, bad)
+     return datapath
+ 
+ 
+@@ -141,7 +150,6 @@ class CustomDataset(Dataset):
+         return len(self.data)
+ 
+     def __getitem__(self, index):
+-        # try:
+         data = torch.load(self.data[index])
+         new_data = {}
+         hidden_state = data['hidden_state'][:train_config["max_len"]][None, :]
