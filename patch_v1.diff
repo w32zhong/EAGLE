@@ -21,7 +21,7 @@ index c540794..f2603ee 100644
      commands.append(command)
  # run_command(commands[0])
 diff --git a/eagle/ge_data/ge_data_all_llama2chat.py b/eagle/ge_data/ge_data_all_llama2chat.py
-index eba6161..56b6011 100644
+index eba6161..24d8086 100644
 --- a/eagle/ge_data/ge_data_all_llama2chat.py
 +++ b/eagle/ge_data/ge_data_all_llama2chat.py
 @@ -19,7 +19,7 @@ from datasets import load_dataset
@@ -55,3 +55,46 @@ index eba6161..56b6011 100644
      )
  
      # ds1 = ds1.filter(lambda x: len(x["input_ids"]) < 1024, batched=False)
+@@ -194,12 +198,10 @@ outdir = f'{args.outdir}/{args.index}'
+ if not os.path.exists(outdir):
+     os.makedirs(outdir)
+ 
+-def writedata(name,data_point):
++def writedata(name,data_point,id):
+     if not os.path.exists(name):
+         os.makedirs(name)
+-    current_length=len(os.listdir(name))
+-    idx=current_length
+-    torch.save(data_point, f'{name}/data_{idx}.ckpt')
++    torch.save(data_point, f'{name}/data_{id}.ckpt')
+ 
+ 
+ for id,data in enumerate(ds):
+@@ -207,7 +209,9 @@ for id,data in enumerate(ds):
+         print(id,end="\t")
+     if id % 1000 == 0:
+         print("")
+-    outdata = ge(data)
+-    writedata(outdir,outdata)
+-
+ 
++    if os.path.exists(f'{outdir}/data_{id}.ckpt'):
++        print('skip:', id)
++        continue
++    outdata = ge(data)
++    writedata(outdir,outdata,id)
+diff --git a/eagle/train/main.py b/eagle/train/main.py
+index 9cd152f..f6495b1 100644
+--- a/eagle/train/main.py
++++ b/eagle/train/main.py
+@@ -67,8 +67,8 @@ from transformers import get_linear_schedule_with_warmup, AutoConfig
+ 
+ if accelerator.is_main_process:
+     import wandb
+-
+-    wandb.init(project="ess", entity="yuhui-li", config=train_config)
++    wandb.init(project="beagle", config=train_config)
++    #wandb.init(project="ess", entity="yuhui-li", config=train_config)
+ 
+ baseconfig = AutoConfig.from_pretrained(args.basepath)
+ 
