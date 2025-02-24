@@ -19,7 +19,7 @@ from huggingface_hub import hf_hub_download
 from .time_stats import TimeStats
 
 
-def my_ckpt_convert(state_dict):
+def my_ckpt_convert(state_dict, base_model):
     # eagle_fc -> fc
     # model.embed_tokens -> embed_tokens
     # del model.norm.*
@@ -28,11 +28,16 @@ def my_ckpt_convert(state_dict):
     new_state_dict = dict()
     for key, val in state_dict.items():
         if key.startswith('model.norm.'):
+            base_model_param = base_model.get_parameter(key)
+            torch.isclose(base_model_param, val.to(base_model_param.device))
             continue
         elif key.startswith('lm_head.'):
+            base_model_param = base_model.get_parameter(key)
+            torch.isclose(base_model_param, val.to(base_model_param.device))
             continue
         elif key.startswith('speculative_decoder.input_layernorm'):
-            continue
+            assert False, 'EAGLE does not have input_layernorm!'
+
         key = key.replace('eagle_fc', 'fc')
         key = key.replace('model.embed_tokens', 'embed_tokens')
         key = key.replace('speculative_decoder', 'layers.0')
@@ -129,7 +134,7 @@ class EaModel(nn.Module):
                 #load_model_path=hf_hub_download(ea_model_path, "model.safetensors")
                 load_model_path = os.path.join(ea_model_path, "model.safetensors")
                 ea_layer_state_dict = load_file(load_model_path, device='cuda:0')
-                ea_layer_state_dict = my_ckpt_convert(ea_layer_state_dict)
+                ea_layer_state_dict = my_ckpt_convert(ea_layer_state_dict, base_model)
                 print('converted keys:', ea_layer_state_dict.keys())
 
         if ea_layer_state_dict is None:
