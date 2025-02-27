@@ -18,6 +18,7 @@ class TimeStats():
         self._start[key] = time.time_ns()
 
     def stop(self, key, verbose=False):
+        return
         #torch.cuda.synchronize()
         dt = time.time_ns() - self._start[key]
         dt_ms = dt / 1_000_000
