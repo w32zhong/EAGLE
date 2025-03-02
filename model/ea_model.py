@@ -36,10 +36,11 @@ def my_ckpt_convert(state_dict, base_model):
             torch.isclose(base_model_param, val.to(base_model_param.device))
             continue
         elif key.startswith('speculative_decoder.input_layernorm'):
-            assert False, 'EAGLE does not have input_layernorm!'
+            print('Warning: EAGLE does not have input_layernorm!')
+            continue
 
+        key = key.replace('model.', '')
         key = key.replace('eagle_fc', 'fc')
-        key = key.replace('model.embed_tokens', 'embed_tokens')
         key = key.replace('speculative_decoder', 'layers.0')
         new_state_dict[key] = val
     return new_state_dict

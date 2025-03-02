@@ -10,7 +10,7 @@ print(transformers.__path__)
 model = EaModel.from_pretrained(
     base_model_path='meta-llama/Llama-2-7b-chat-hf',
     #ea_model_path='yuhuili/EAGLE-llama2-chat-7B',
-    ea_model_path='/home/tk/Desktop/EAGLE-v1/eagle/train/ckpt-const-scheduler/model_9' if False else './convert_ckpt3', # convert_ckpt uses orignal config.json and model.safetensors trained via our pipeline
+    ea_model_path='/home/tk/Desktop/EAGLE-v1/eagle/train/ckpt-const-scheduler/model_9' if False else './convert_ckpt1', # convert_ckpt uses orignal config.json and model.safetensors trained via our pipeline
     torch_dtype=torch.bfloat16,
     #load_in_8bit=True,
     device_map="auto"
