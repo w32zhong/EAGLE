@@ -27,25 +27,18 @@ def my_ckpt_convert(state_dict, base_model):
     # speculative_decoder.* -> layers.0.*
     new_state_dict = dict()
     for key, val in state_dict.items():
-        if key.startswith('model.norm.'):
+        if key.startswith('eagle_fc.'):
+            key = key.replace('eagle_fc', 'fc')
+        elif key.startswith('speculative_decoder.'):
+            key = key.replace('speculative_decoder', 'layers.0')
+        elif 'embed_tokens' in key:
             base_model_param = base_model.get_parameter(key)
-            torch.isclose(base_model_param, val.to(base_model_param.device))
-            continue
-        elif key.startswith('lm_head.'):
-            base_model_param = base_model.get_parameter(key)
-            torch.isclose(base_model_param, val.to(base_model_param.device))
-            continue
-        elif 'layers.0' in key:
+            assert torch.allclose(base_model_param, val.to(base_model_param.device))
+            key = "embed_tokens.weight"
+        else:
             print('Warning: Ignore base model key:', key)
             continue
-        elif 'input_layernorm' in key:
-            print('Warning: EAGLE does not have input_layernorm!')
-            print(key, val)
-            continue
 
-        key = key.replace('model.', '')
-        key = key.replace('eagle_fc', 'fc')
-        key = key.replace('speculative_decoder', 'layers.0')
         new_state_dict[key] = val
     return new_state_dict
 
