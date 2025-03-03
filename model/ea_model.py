@@ -35,6 +35,9 @@ def my_ckpt_convert(state_dict, base_model):
             base_model_param = base_model.get_parameter(key)
             torch.isclose(base_model_param, val.to(base_model_param.device))
             continue
+        elif 'layers.0' in key:
+            print('Warning: Ignore base model key:', key)
+            continue
         elif 'input_layernorm' in key:
             print('Warning: EAGLE does not have input_layernorm!')
             print(key, val)
