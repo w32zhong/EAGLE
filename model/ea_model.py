@@ -27,6 +27,8 @@ def my_ckpt_convert(state_dict, base_model):
     # speculative_decoder.* -> layers.0.*
     new_state_dict = dict()
     for key, val in state_dict.items():
+        val = val.to(dtype=torch.bfloat16)
+
         if key.startswith('eagle_fc.'):
             key = key.replace('eagle_fc', 'fc')
         elif key.startswith('speculative_decoder.'):
@@ -129,8 +131,8 @@ class EaModel(nn.Module):
                 load_model_path=hf_hub_download(ea_model_path, "pytorch_model.bin")
             except:
                 from safetensors.torch import load_file
-                #load_model_path=hf_hub_download(ea_model_path, "model.safetensors")
-                load_model_path = os.path.join(ea_model_path, "model.safetensors")
+                load_model_path = hf_hub_download(ea_model_path, "model.safetensors")
+                #load_model_path = os.path.join(ea_model_path, "model.safetensors")
                 ea_layer_state_dict = load_file(load_model_path, device='cuda:0')
                 ea_layer_state_dict = my_ckpt_convert(ea_layer_state_dict, base_model)
                 print('converted keys:', ea_layer_state_dict.keys())
