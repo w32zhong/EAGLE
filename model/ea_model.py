@@ -128,11 +128,14 @@ class EaModel(nn.Module):
         ea_layer_state_dict = None
         if not os.path.exists(load_model_path):
             try:
+                # original EAGLE ckpt
                 load_model_path=hf_hub_download(ea_model_path, "pytorch_model.bin")
             except:
+                # ckpt trained from our pipeline
                 from safetensors.torch import load_file
-                load_model_path = hf_hub_download(ea_model_path, "model.safetensors")
-                #load_model_path = os.path.join(ea_model_path, "model.safetensors")
+                load_model_path = os.path.join(ea_model_path, "model.safetensors")
+                if not os.path.exists(load_model_path):
+                    load_model_path = hf_hub_download(ea_model_path, "model.safetensors")
                 ea_layer_state_dict = load_file(load_model_path, device='cuda:0')
                 ea_layer_state_dict = my_ckpt_convert(ea_layer_state_dict, base_model)
                 print('converted keys:', ea_layer_state_dict.keys())
