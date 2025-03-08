@@ -96,7 +96,6 @@ head.eval()
 for param in head.parameters():
     param.requires_grad = False
 
-
 def list_files(path):
     datapath = []
     for root, directories, files in os.walk(path):
@@ -319,6 +318,11 @@ if accelerator.is_main_process:
 
 config = EConfig.from_pretrained(train_config["config_path"])
 model = Model(config, load_emb=True, path=args.basepath)
+
+for pp, p in model.named_parameters():
+    mean, std = p.mean().item(), p.std().item()
+    print(pp, f'({mean:.3f}, {std:.3f})')
+    #print(p.dtype, p)
 
 criterion = nn.SmoothL1Loss(reduction="none")
 optimizer = optim.AdamW(model.parameters(), lr=train_config["lr"], betas=(train_config["b1"], train_config["b2"]))
