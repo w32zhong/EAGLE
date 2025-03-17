@@ -278,6 +278,8 @@ class EaModel(nn.Module):
                 sample_p
             )
 
+            yield input_ids
+
             if is_llama3:
                 if stop_token_id in input_ids[0, input_len:].tolist():
                     break
