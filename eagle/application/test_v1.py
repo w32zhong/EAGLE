@@ -12,7 +12,8 @@ model = EaModel.from_pretrained(
     base_model_path='meta-llama/Llama-2-7b-chat-hf',
     ea_model_path='yuhuili/EAGLE-llama2-chat-7B',
     torch_dtype=torch.bfloat16,
-    device_map="auto"
+    device_map="auto",
+    total_token=-1
 )
 model.eval()
 
