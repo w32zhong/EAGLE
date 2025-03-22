@@ -687,10 +687,12 @@ class Model(nn.Module):
         last_hidden = out_hidden[:, -1]
 
         last_headout = head(last_hidden)
+        #print(self.tokenizer.batch_decode(input_ids))
 
         last_p = self.logsoftmax(last_headout)
         top = torch.topk(last_p, top_k, dim=-1)
         topk_index, topk_p = top.indices, top.values
+        #print(self.tokenizer.batch_decode(topk_index))
         scores = topk_p[0]
         scores_list.append(scores[None])
         parents_list.append(torch.zeros(1, dtype=torch.long, device=scores.device))
@@ -721,21 +723,18 @@ class Model(nn.Module):
 
             top = torch.topk(last_p, top_k, dim=-1)
             topk_index, topk_p = top.indices, top.values
+            # topk_index: [10, 10]
+            #print(self.tokenizer.batch_decode(topk_index))
 
-            cu_scores = topk_p + scores[:, None]
+            cu_scores = topk_p + scores[:, None] # [10, 10] + [10] = [10, 10]
 
             topk_cs = torch.topk(cu_scores.view(-1), top_k, dim=-1)
             topk_cs_index, topk_cs_p = topk_cs.indices, topk_cs.values
             scores = topk_cs_p
 
             out_ids = topk_cs_index // top_k
-            input_hidden = out_hidden[:, out_ids]
-            # with Timer("2index"):
-            #     in_ids = topk_cs_index % top_k
-            #     input_ids = topk_index[out_ids, in_ids][None]
-            # with Timer("1index"):
-            input_ids = topk_index.view(-1)[topk_cs_index][None]
-            # print(input_ids.equal(input_ids0))
+            input_hidden = out_hidden[:, out_ids] # out_hidden: [1, 10, 4096] topk last hiddens
+            input_ids = topk_index.view(-1)[topk_cs_index][None] # topk current tokens
 
             ss_token.append(topk_index)
             scores_list.append(cu_scores)
