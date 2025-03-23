@@ -752,7 +752,12 @@ class Model(nn.Module):
 
             ss_token.append(topk_index)
             scores_list.append(cu_scores)
+            #print(out_ids, tree_mask.shape)
+            #torch.set_printoptions(linewidth=800)
+            #print(tree_mask)
             tree_mask = torch.cat((tree_mask[:, :, out_ids], self.tree_mask_init), dim=3)
+            #print(tree_mask)
+            #breakpoint()
 
             # if self.threshold < 0 and cu_scores.max() < self.threshold:
             #     break
