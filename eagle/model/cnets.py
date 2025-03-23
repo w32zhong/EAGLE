@@ -634,6 +634,11 @@ class Model(nn.Module):
                     position_ids,
                 )
             else:
+                # print(hidden_states.shape, attention_mask.shape)
+                # torch.Size([1, 32, 4096]) torch.Size([1, 1, 32, 32])
+                # torch.Size([1, 10, 4096]) torch.Size([1, 1, 10, 42])
+                # torch.Size([1, 10, 4096]) torch.Size([1, 1, 10, 52])
+                # ...
                 layer_outputs = decoder_layer(
                     hidden_states,
                     attention_mask=attention_mask,
