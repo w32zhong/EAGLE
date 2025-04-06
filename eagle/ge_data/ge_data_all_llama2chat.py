@@ -19,7 +19,7 @@ from datasets import load_dataset
 import json
 from fastchat.model.model_adapter import get_conversation_template
 
-bigname="/home/hongyanz/scratch/weights/llama2chat/13B"
+bigname="meta-llama/Llama-2-7b-chat-hf"
 # bigname = "/home/lyh/weights/hf/llama/7B/"
 # smallname = "/home/lyh/weights/hf/llama/7B/"
 
@@ -43,7 +43,11 @@ def build_dataset_rank(
         tokenizer, split="train",
         select=None,
 ):
-    ds = load_dataset('json', data_files="/home/hongyanz/scratch/data/ShareGPT_V4.3_unfiltered_cleaned_split.json")
+    ds = load_dataset(
+        path="Aeala/ShareGPT_Vicuna_unfiltered",
+        data_files=["ShareGPT_V4.3_unfiltered_cleaned_split.json"],
+        revision='8b0048ad6ae8c22f46a78c15559dec98feef5539'
+    )
     ds = ds['train']
     ds = ds.shuffle(seed=42)
     ds1 = ds.select(range(args.start, args.end))
@@ -142,7 +146,7 @@ def build_dataset_rank(
         batched=True,
         num_proc=num_proc,
         remove_columns=original_columns1,
-        load_from_cache_file=False
+        #load_from_cache_file=False
     )
 
     # ds1 = ds1.filter(lambda x: len(x["input_ids"]) < 1024, batched=False)
@@ -194,12 +198,10 @@ outdir = f'{args.outdir}/{args.index}'
 if not os.path.exists(outdir):
     os.makedirs(outdir)
 
-def writedata(name,data_point):
+def writedata(name,data_point,id):
     if not os.path.exists(name):
         os.makedirs(name)
-    current_length=len(os.listdir(name))
-    idx=current_length
-    torch.save(data_point, f'{name}/data_{idx}.ckpt')
+    torch.save(data_point, f'{name}/data_{id}.ckpt')
 
 
 for id,data in enumerate(ds):
@@ -207,7 +209,9 @@ for id,data in enumerate(ds):
         print(id,end="\t")
     if id % 1000 == 0:
         print("")
+
+    if os.path.exists(f'{outdir}/data_{id}.ckpt'):
+        print('skip:', id)
+        continue
     outdata = ge(data)
-    writedata(outdir,outdata)
-
-
+    writedata(outdir,outdata,id)

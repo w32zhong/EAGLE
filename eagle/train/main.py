@@ -64,11 +64,12 @@ from tqdm import tqdm
 # import accelerate
 import numpy as np
 from transformers import get_linear_schedule_with_warmup, AutoConfig
+from transformers import get_constant_schedule_with_warmup
 
+wandb = None
 if accelerator.is_main_process:
     import wandb
-
-    wandb.init(project="ess", entity="yuhui-li", config=train_config)
+    wandb.init(project="beagle", config=train_config)
 
 baseconfig = AutoConfig.from_pretrained(args.basepath)
 
@@ -100,10 +101,19 @@ for param in head.parameters():
 
 def list_files(path):
     datapath = []
+    good, bad = 0, 0
     for root, directories, files in os.walk(path):
         for file in files:
             file_path = os.path.join(root, file)
-            datapath.append(file_path)
+            try:
+                #data = torch.load(file_path)
+                datapath.append(file_path)
+                good += 1
+            except Exception as e:
+                if accelerator.is_local_main_process:
+                    print(e, file_path)
+                bad += 1
+    print('good/bad:', good, bad)
     return datapath
 
 
@@ -141,7 +151,6 @@ class CustomDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, index):
-        # try:
         data = torch.load(self.data[index])
         new_data = {}
         hidden_state = data['hidden_state'][:train_config["max_len"]][None, :]
@@ -172,6 +181,7 @@ class CustomDataset(Dataset):
         new_data["target"] = target
         new_data["hidden_state_big"] = hidden_state
         new_data["input_ids"] = input_ids_target
+        new_data["data_ids"] = self.data[index]
         # sample = torch.cat((data['xs'],data['xb']))
         # sample=torch.cat((self.data[index]['x'],self.data[index]['logits']))
         # label = data['y']
@@ -206,6 +216,8 @@ class DataCollatorWithPadding:
             [item['loss_mask'] + [0] * (max_length - len(item['loss_mask'])) for item in features])
         batch_attention_mask = torch.tensor(
             [item['attention_mask'] + [0] * (max_length - len(item['attention_mask'])) for item in features])
+
+        batch_data_ids = [item["data_ids"] for item in features]
         # batch_loss_mask = torch.ones_like(batch_loss_mask)
         # batch_attention_mask=torch.ones_like(batch_attention_mask)
         batch = {
@@ -214,6 +226,7 @@ class DataCollatorWithPadding:
             "target": batch_target,
             "attention_mask": batch_attention_mask,
             "loss_mask": batch_loss_mask,
+            "data_ids": batch_data_ids
         }
         return batch
 
@@ -299,14 +312,14 @@ else:
 
 datapath = list_files(train_config["datapath"])
 
-traindatapath = datapath[:int(len(datapath) * 0.95)]
+traindatapath = datapath[:]
+#traindatapath = datapath[:int(len(datapath) * 0.95)]
 testdatapath = datapath[int(len(datapath) * 0.95):]
-# print('td',train_config["datapath"])
-# print(datapath)
-# exit()
+
 traindataset = CustomDataset(traindatapath, transform=aug)
 testdataset = CustomDataset(testdatapath)
-train_loader = DataLoader(traindataset, batch_size=train_config["bs"], shuffle=True,
+
+train_loader = DataLoader(traindataset, batch_size=train_config["bs"], shuffle=False,
                           collate_fn=DataCollatorWithPadding(), num_workers=train_config["num_workers"],
                           pin_memory=True)
 test_loader = DataLoader(testdataset, batch_size=train_config["bs"], shuffle=False,
@@ -320,6 +333,8 @@ if accelerator.is_main_process:
 
 config = EConfig.from_pretrained(train_config["config_path"])
 model = Model(config, load_emb=True, path=args.basepath)
+if accelerator.is_local_main_process:
+    accelerator.save_model(model, f"{args.cpdir}/model_init")
 
 criterion = nn.SmoothL1Loss(reduction="none")
 optimizer = optim.AdamW(model.parameters(), lr=train_config["lr"], betas=(train_config["b1"], train_config["b2"]))
@@ -330,8 +345,9 @@ total_steps = train_config["total_steps"]
 is_warmup = train_config["is_warmup"]
 
 if is_warmup:
-    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=num_warmup_steps,
-                                                num_training_steps=total_steps)
+    #scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=num_warmup_steps,
+    #                                            num_training_steps=total_steps)
+    scheduler = get_constant_schedule_with_warmup(optimizer, num_warmup_steps=num_warmup_steps)
 
     model, head, optimizer, train_loader, test_loader, scheduler = accelerator.prepare(
         model, head, optimizer, train_loader, test_loader, scheduler
@@ -341,14 +357,33 @@ else:
         model, head, optimizer, train_loader, test_loader
     )
 # accelerator.load_state("checkpoints/state_5")
-for epoch in range(num_epochs + 1):
+
+def print_eagle_train_states(g_step, data, models):
+    import json
+    states = {
+        'rank': os.environ.get('RANK', None),
+        'input_ids': data['input_ids'].sum().item()
+    }
+    for model in models:
+        if hasattr(model, 'module'):
+            model = model.module
+        for key, val in model.state_dict().items():
+            states[key] = '-'.join([str(val.sum().item()), str(val.dtype)])
+    print(json.dumps(states, indent=2))
+
+
+g_step = 0
+for epoch in range(num_epochs):
+    print('epoch:', epoch, '/', num_epochs)
     top_3acc = [0 for _ in range(3)]
     correct = 0
     total = 0
     epoch_loss = 0
     num_batches = 0
     model.train()
+
     for batch_idx, data in enumerate(tqdm(train_loader)):
+        #print(os.environ['RANK'], os.environ['WORLD_SIZE'], data['data_ids'])
 
         with accelerator.accumulate(model):
             optimizer.zero_grad()
@@ -364,7 +399,10 @@ for epoch in range(num_epochs + 1):
             ploss = -torch.sum(torch.sum(loss_mask * plogp, 2)) / (loss_mask.sum()+1e-5)
             vloss = criterion(predict, data["target"])
             vloss = torch.sum(torch.mean(loss_mask * vloss, 2)) / (loss_mask.sum()+1e-5)
+
             loss = train_config["v_w"] * vloss + train_config["p_w"] * ploss
+            #loss = 0 + train_config["p_w"] * ploss
+
             # loss.backward()
             accelerator.backward(loss)
             accelerator.clip_grad_value_(model.parameters(), train_config["grad_clip"])
@@ -372,113 +410,132 @@ for epoch in range(num_epochs + 1):
             if is_warmup:
                 scheduler.step()
 
-        
-
-        with torch.no_grad():
-            _, predicted = torch.max(out_head, 2)
-            _, target = torch.max(target_head, 2)
-            ct = loss_mask.sum().item()
-            cc = ((predicted == target) * loss_mask.squeeze()).sum().item()
-            out_head = out_head.view(-1, target_head.shape[-1])[loss_mask.view(-1) == 1]
-            target = target.view(-1)[loss_mask.view(-1) == 1]
-            topkacc = top_accuracy(out_head, target, (1, 2, 3))
-            for top_i in range(len(topkacc)):
-                top_3acc[top_i] += topkacc[top_i]
-            total += ct
-            correct += cc
-        if accelerator.is_main_process and ct != 0:
-            logdict = {"train/lr": optimizer.optimizer.param_groups[0]["lr"], "train/vloss": vloss.item(),
-                       "train/ploss": ploss.item(), "train/loss": loss.item(), "train/acc": cc / ct}
-            for id, i in enumerate(top_3acc):
-                logdict[f'train/top_{id + 1}_acc'] = topkacc[id].item() / ct
+        logdict = {
+            "train/g_step": g_step,
+            "train/epoch": epoch,
+            "train/batch_idx": batch_idx,
+            "train/lr": optimizer.optimizer.param_groups[0]["lr"],
+            "train/vloss": vloss.item(),
+            "train/ploss": ploss.item(),
+            "train/loss": loss.item(),
+        }
+        if accelerator.is_local_main_process and wandb:
             wandb.log(logdict)
-            # for id,i in enumerate(top_3acc):
-            #     wandb.log({f'train/top_{id+1}_acc':topkacc[id].item()/ct})
+        if g_step % 100 == 0:
+            print_eagle_train_states(g_step, data, [model, head])
+            if accelerator.is_local_main_process:
+                print(logdict)
+        g_step += 1
 
-        del ploss, vloss
-        epoch_loss += loss.item()
-        num_batches += 1
+        #with torch.no_grad():
+        #    _, predicted = torch.max(out_head, 2)
+        #    _, target = torch.max(target_head, 2)
+        #    ct = loss_mask.sum().item()
+        #    cc = ((predicted == target) * loss_mask.squeeze()).sum().item()
+        #    out_head = out_head.view(-1, target_head.shape[-1])[loss_mask.view(-1) == 1]
+        #    target = target.view(-1)[loss_mask.view(-1) == 1]
+        #    topkacc = top_accuracy(out_head, target, (1, 2, 3))
+        #    for top_i in range(len(topkacc)):
+        #        top_3acc[top_i] += topkacc[top_i]
+        #    total += ct
+        #    correct += cc
+        #if accelerator.is_main_process and ct != 0:
+        #    logdict = {"train/lr": optimizer.optimizer.param_groups[0]["lr"], "train/vloss": vloss.item(),
+        #               "train/ploss": ploss.item(), "train/loss": loss.item(), "train/acc": cc / ct}
+        #    for id, i in enumerate(top_3acc):
+        #        logdict[f'train/top_{id + 1}_acc'] = topkacc[id].item() / ct
+        #    #wandb.log(logdict)
+        #    # for id,i in enumerate(top_3acc):
+        #    #     wandb.log({f'train/top_{id+1}_acc':topkacc[id].item()/ct})
 
-    correct, total = torch.tensor(correct).cuda(), torch.tensor(total).cuda()
-    correct, total = accelerator.gather_for_metrics((correct, total))
-    correct, total = correct.sum().item(), total.sum().item()
-    epoch_loss /= num_batches
-    top_3acc = accelerator.gather_for_metrics(top_3acc)
+        #del ploss, vloss
+        #epoch_loss += loss.item()
+        #num_batches += 1
+
     if accelerator.is_local_main_process:
-        for id, i in enumerate(top_3acc):
-            wandb.log({f'train/epochtop_{id + 1}_acc': i.sum().item() / total})
-    if accelerator.is_local_main_process:
-        print('Epoch [{}/{}], Loss: {:.4f}'.format(epoch + 1, num_epochs, epoch_loss))
-        print('Train Accuracy: {:.2f}%'.format(100 * correct / total))
-        wandb.log({"train/epochacc": correct / total, "train/epochloss": epoch_loss})
+        accelerator.save_model(model, f"{args.cpdir}/model_{epoch}")
+        accelerator.save_state(output_dir=f"{args.cpdir}/state_{epoch}")
 
-    if (epoch + 1) % train_config["save_freq"]:
-        top_3acc = [0 for _ in range(3)]
-        correct = 0
-        total = 0
-        epoch_loss = 0
-        num_batches = 0
-        model.eval()
+    #correct, total = torch.tensor(correct).cuda(), torch.tensor(total).cuda()
+    #correct, total = accelerator.gather_for_metrics((correct, total))
+    #correct, total = correct.sum().item(), total.sum().item()
+    #epoch_loss /= num_batches
+    #top_3acc = accelerator.gather_for_metrics(top_3acc)
+    #if accelerator.is_local_main_process:
+    #    for id, i in enumerate(top_3acc):
+    #        wandb.log({f'train/epochtop_{id + 1}_acc': i.sum().item() / total})
+    #if accelerator.is_local_main_process:
+    #    print('Epoch [{}/{}], Loss: {:.4f}'.format(epoch + 1, num_epochs, epoch_loss))
+    #    print('Train Accuracy: {:.2f}%'.format(100 * correct / total))
+    #    wandb.log({"train/epochacc": correct / total, "train/epochloss": epoch_loss})
 
-        k_acc = [[] for i in range(5)]
-        for batch_idx, data in enumerate(tqdm(test_loader)):
-            with torch.no_grad():
-                if batch_idx < 10:
-                    acces = getkacc(model, data, head, max_length=5)
-                    for i in range(len(acces)):
-                        k_acc[i].append(acces[i])
-                predict = model(data["hidden_states"], input_ids=data["input_ids"],
-                                attention_mask=data["attention_mask"])
-                target_head = head(data["target"])
-                target_p = nn.Softmax(dim=2)(target_head)
-                target_p = target_p.detach()
-                out_head = head(predict)
-                out_logp = nn.LogSoftmax(dim=2)(out_head)
-                loss_mask = data["loss_mask"][:, :, None]
-                plogp = target_p * out_logp
-                ploss = -torch.sum(torch.sum(loss_mask * plogp, 2)) / (loss_mask.sum()+1e-5)
-                vloss = criterion(predict, data["target"])
-                vloss = torch.sum(torch.mean(loss_mask * vloss, 2)) / (loss_mask.sum()+1e-5)
-                loss = train_config["v_w"] * vloss + train_config["p_w"] * ploss
-                _, predicted = torch.max(out_head, 2)
-                _, target = torch.max(target_head, 2)
-                ct = loss_mask.sum().item()
-                cc = ((predicted == target) * loss_mask.squeeze()).sum().item()
-                out_head = out_head.view(-1, target_head.shape[-1])[loss_mask.view(-1) == 1]
-                target = target.view(-1)[loss_mask.view(-1) == 1]
-                topkacc = top_accuracy(out_head, target, (1, 2, 3))
-                for top_i in range(len(topkacc)):
-                    top_3acc[top_i] += topkacc[top_i]
-                total += ct
-                correct += cc
-            epoch_loss += loss.item()
-            num_batches += 1
+    #if (epoch + 1) % train_config["save_freq"]:
+    #    top_3acc = [0 for _ in range(3)]
+    #    correct = 0
+    #    total = 0
+    #    epoch_loss = 0
+    #    num_batches = 0
+    #    model.eval()
 
-        mean_acces = []
-        for id, i in enumerate(k_acc):
-            mean_acc = np.array(i).mean()
-            mean_acc = torch.tensor(mean_acc).cuda()
-            mean_acces.append(mean_acc)
+    #    k_acc = [[] for i in range(5)]
+    #    for batch_idx, data in enumerate(tqdm(test_loader)):
+    #        with torch.no_grad():
+    #            if batch_idx < 10:
+    #                acces = getkacc(model, data, head, max_length=5)
+    #                for i in range(len(acces)):
+    #                    k_acc[i].append(acces[i])
+    #            predict = model(data["hidden_states"], input_ids=data["input_ids"],
+    #                            attention_mask=data["attention_mask"])
+    #            target_head = head(data["target"])
+    #            target_p = nn.Softmax(dim=2)(target_head)
+    #            target_p = target_p.detach()
+    #            out_head = head(predict)
+    #            out_logp = nn.LogSoftmax(dim=2)(out_head)
+    #            loss_mask = data["loss_mask"][:, :, None]
+    #            plogp = target_p * out_logp
+    #            ploss = -torch.sum(torch.sum(loss_mask * plogp, 2)) / (loss_mask.sum()+1e-5)
+    #            vloss = criterion(predict, data["target"])
+    #            vloss = torch.sum(torch.mean(loss_mask * vloss, 2)) / (loss_mask.sum()+1e-5)
+    #            loss = train_config["v_w"] * vloss + train_config["p_w"] * ploss
+    #            _, predicted = torch.max(out_head, 2)
+    #            _, target = torch.max(target_head, 2)
+    #            ct = loss_mask.sum().item()
+    #            cc = ((predicted == target) * loss_mask.squeeze()).sum().item()
+    #            out_head = out_head.view(-1, target_head.shape[-1])[loss_mask.view(-1) == 1]
+    #            target = target.view(-1)[loss_mask.view(-1) == 1]
+    #            topkacc = top_accuracy(out_head, target, (1, 2, 3))
+    #            for top_i in range(len(topkacc)):
+    #                top_3acc[top_i] += topkacc[top_i]
+    #            total += ct
+    #            correct += cc
+    #        epoch_loss += loss.item()
+    #        num_batches += 1
 
-        mean_acces = accelerator.gather_for_metrics(mean_acces)
-        if accelerator.is_local_main_process:
-            for id, i in enumerate(mean_acces):
-                mean_acc = i.mean().item()
-                wandb.log({f"test/{id}_acc": mean_acc})
+    #    mean_acces = []
+    #    for id, i in enumerate(k_acc):
+    #        mean_acc = np.array(i).mean()
+    #        mean_acc = torch.tensor(mean_acc).cuda()
+    #        mean_acces.append(mean_acc)
 
-        correct, total = torch.tensor(correct).cuda(), torch.tensor(total).cuda()
-        correct, total = accelerator.gather_for_metrics((correct, total))
-        correct, total = correct.sum().item(), total.sum().item()
-        top_3acc = accelerator.gather_for_metrics(top_3acc)
-        if accelerator.is_local_main_process:
-            for id, i in enumerate(top_3acc):
-                wandb.log({f'test/top_{id + 1}_acc': i.sum().item() / total})
-        epoch_loss /= num_batches
-        if accelerator.is_local_main_process:
-            print('Test Epoch [{}/{}], Loss: {:.4f}'.format(epoch + 1, num_epochs, epoch_loss))
-            print('Test Accuracy: {:.2f}%'.format(100 * correct / total))
-            wandb.log({"test/epochacc": correct / total, "test/epochloss": epoch_loss})
-            # accelerator.save_model(model, f"checkpoints/model_{epoch}")
-            # accelerator.save_state(output_dir=f"{args.outdir}/state_{epoch}")
-            # os.system(f"cp -r {args.outdir} {args.cpdir}")
-            accelerator.save_state(output_dir=f"{args.cpdir}/state_{epoch}")
+    #    mean_acces = accelerator.gather_for_metrics(mean_acces)
+    #    if accelerator.is_local_main_process:
+    #        for id, i in enumerate(mean_acces):
+    #            mean_acc = i.mean().item()
+    #            wandb.log({f"test/{id}_acc": mean_acc})
+
+    #    correct, total = torch.tensor(correct).cuda(), torch.tensor(total).cuda()
+    #    correct, total = accelerator.gather_for_metrics((correct, total))
+    #    correct, total = correct.sum().item(), total.sum().item()
+    #    top_3acc = accelerator.gather_for_metrics(top_3acc)
+    #    if accelerator.is_local_main_process:
+    #        for id, i in enumerate(top_3acc):
+    #            wandb.log({f'test/top_{id + 1}_acc': i.sum().item() / total})
+    #    epoch_loss /= num_batches
+    #    if accelerator.is_local_main_process:
+    #        print('Test Epoch [{}/{}], Loss: {:.4f}'.format(epoch + 1, num_epochs, epoch_loss))
+    #        print('Test Accuracy: {:.2f}%'.format(100 * correct / total))
+    #        wandb.log({"test/epochacc": correct / total, "test/epochloss": epoch_loss})
+    #        # accelerator.save_model(model, f"checkpoints/model_{epoch}")
+    #        # accelerator.save_state(output_dir=f"{args.outdir}/state_{epoch}")
+    #        # os.system(f"cp -r {args.outdir} {args.cpdir}")
+    #        accelerator.save_state(output_dir=f"{args.cpdir}/state_{epoch}")
