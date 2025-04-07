@@ -663,6 +663,7 @@ class Model(nn.Module):
 
     @torch.no_grad()
     def topK_genrate(self, hidden_states, input_ids, head, logits_processor):
+        if hasattr(self, 'timer'): self.timer.start('draft prepare')
 
         input_ids = input_ids.to(hidden_states.device)
         total_tokens = self.total_tokens
@@ -709,8 +710,11 @@ class Model(nn.Module):
         tree_mask = self.tree_mask_init # eye matrix, initially
         topk_cs_index = torch.arange(top_k, device=self.embed_tokens.weight.device)
 
+        if hasattr(self, 'timer'): self.timer.stop('draft prepare')
+
         # 4
         for i in range(depth):
+            if hasattr(self, 'timer'): self.timer.start('draft iter')
             self.tree_mask = tree_mask
             position_ids = len_posi + self.position_ids
             # with Timer("draft one"):
@@ -761,9 +765,12 @@ class Model(nn.Module):
 
             # if self.threshold < 0 and cu_scores.max() < self.threshold:
             #     break
+            if hasattr(self, 'timer'): self.timer.stop('draft iter')
 
         # del parents_list,scores_list,ss_token
         # return draft_tokens, mask_index,tree_mask,tree_position_ids
+
+        if hasattr(self, 'timer'): self.timer.start('draft commit')
 
         #scores_list, ss_token: [(1,10), (10,10), (10,10), (10,10) ...]
         scores_list = torch.cat(scores_list, dim=0).view(-1) # [510]
@@ -832,6 +839,8 @@ class Model(nn.Module):
         retrieve_indices = torch.tensor(retrieve_indices, dtype=torch.long)
         del mask_index, mask_index_list, noleaf_index, noleaf_num, leaf_num, max_depth, rid
         tree_position_ids = tree_position_ids.to(hidden_states.device)
+
+        if hasattr(self, 'timer'): self.timer.stop('draft commit')
 
         return draft_tokens, retrieve_indices, tree_mask, tree_position_ids
 

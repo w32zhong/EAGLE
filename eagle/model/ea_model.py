@@ -404,6 +404,7 @@ class EaModel(nn.Module):
         self.ea_layer.reset_kv()
 
 
+        if hasattr(self, 'timer'): self.timer.start('prefill')
 
         # Initialize the past key and value states
         if hasattr(self, "past_key_values"):
@@ -428,11 +429,15 @@ class EaModel(nn.Module):
             input_ids, self, past_key_values, logits_processor
         )
         new_token = 0
+        if hasattr(self, 'timer'): self.timer.stop('prefill')
 
         for idx in range(max_length):
+            if hasattr(self, 'timer'): self.timer.start('iteration')
+
             #with Timer("all"):
             self.base_model.model.tree_mask = tree_mask
 
+            if hasattr(self, 'timer'): self.timer.start('verify')
             draft_tokens=draft_tokens.to(input_ids.device)
             #with Timer("tree_decoding"):
             logits, hidden_state_new, outputs = tree_decoding(
@@ -450,9 +455,12 @@ class EaModel(nn.Module):
             best_candidate, accept_length, sample_p = evaluate_posterior(
                 logits, candidates, logits_processor
             )
+            if hasattr(self, 'timer'): self.timer.stop('verify')
+
             if hasattr(self, 'timer'): self.timer._hist['verify length'].append(accept_length.item())
             # print(accept_length)
             #with Timer("update_inference_inputs"):
+            if hasattr(self, 'timer'): self.timer.start('draft')
             input_ids, draft_tokens, retrieve_indices,tree_mask,tree_position_ids, new_token, hidden_state, sample_token = update_inference_inputs(
                 input_ids,
                 candidates,
@@ -467,6 +475,9 @@ class EaModel(nn.Module):
                 hidden_state_new,
                 sample_p
             )
+            if hasattr(self, 'timer'): self.timer.stop('draft')
+
+            if hasattr(self, 'timer'): self.timer.stop('iteration')
 
             yield input_ids
 
