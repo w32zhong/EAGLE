@@ -259,6 +259,8 @@ class EaModel(nn.Module):
             top_p=0.0,
             top_k=0.0,
             max_steps=512,
+            max_length=2048,
+            max_new_tokens=1024,
             tree_choices=mc_sim_7b_63,
 
     ):
@@ -351,9 +353,9 @@ class EaModel(nn.Module):
 
             if self.tokenizer.eos_token_id in input_ids[0, input_len:].tolist():
                 break
-            if new_token > 1024:
+            if new_token > max_new_tokens:
                 break
-            if input_ids.shape[1] > 1960:
+            if input_ids.shape[1] > max_length:
                 break
 
     @torch.no_grad()
