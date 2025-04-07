@@ -327,6 +327,7 @@ class EaModel(nn.Module):
                 logits, candidates, logits_processor, cart_candidates_prob, tree_logits[2], tree_buffers["p_indices"],
                 tree_candidates, tree_buffers["b_indices"]
             )
+            if hasattr(self, 'timer'): self.timer._hist['verify length'].append(accept_length.item())
             #print("post", time.time() - s)
             input_ids, tree_logits, new_token, hidden_state, sample_token = update_inference_inputs(
                 input_ids,
