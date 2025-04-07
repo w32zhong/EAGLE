@@ -718,8 +718,10 @@ class Model(nn.Module):
             self.tree_mask = tree_mask
             position_ids = len_posi + self.position_ids
             # with Timer("draft one"):
+            if hasattr(self, 'timer'): self.timer.start('draft iter forward')
             out_hidden, past_key_values = self(input_hidden, input_ids=input_ids, past_key_values=past_key_values,
                                                position_ids=position_ids, use_cache=True)
+            if hasattr(self, 'timer'): self.timer.stop('draft iter forward')
             # out_hidden: [1, 10, 4096]
             len_posi += 1
 
