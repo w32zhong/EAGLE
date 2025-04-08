@@ -449,6 +449,9 @@ class EaModel(nn.Module):
                 input_ids,
                 retrieve_indices,
             )
+            if hasattr(self, 'timer'): self.timer.stop('verify')
+
+            if hasattr(self, 'timer'): self.timer.start('iteration misc')
             #retrieve_indices=tree_buffers["retrieve_indices"]
             #logits = logits[0, retrieve_indices]
             draft_tokens=torch.cat((draft_tokens,padding),dim=1)
@@ -456,9 +459,16 @@ class EaModel(nn.Module):
             best_candidate, accept_length, sample_p = evaluate_posterior(
                 logits, candidates, logits_processor
             )
-            if hasattr(self, 'timer'): self.timer.stop('verify')
+            if hasattr(self, 'timer'): self.timer.stop('iteration misc')
 
             if hasattr(self, 'timer'): self.timer._hist['bonus tokens'].append(accept_length.item())
+            if hasattr(self, 'timer') and not self.timer.disable:
+                n_new_tokens = accept_length.item()
+                for i in range(n_new_tokens):
+                    if i == n_new_tokens - 1:
+                        self.timer._hist[f'alpha{i}'].append(0)
+                    else:
+                        self.timer._hist[f'alpha{i}'].append(1)
             # print(accept_length)
             #with Timer("update_inference_inputs"):
             if hasattr(self, 'timer'): self.timer.start('draft')
