@@ -201,7 +201,7 @@ class EaModel(nn.Module):
     ):
         if is_llama3:
             stop_token_id = self.tokenizer.convert_tokens_to_ids("<|eot_id|>")
-        max_length=max_length-self.ea_layer.total_tokens-10
+        #max_length=max_length-self.ea_layer.total_tokens-10
 
         if temperature > 1e-5:
             logits_processor = prepare_logits_processor(temperature=temperature, top_p=top_p, top_k=top_k)
@@ -311,7 +311,7 @@ class EaModel(nn.Module):
     ):
         if is_llama3:
             stop_token_id = self.tokenizer.convert_tokens_to_ids("<|eot_id|>")
-        max_length = max_length - self.ea_layer.total_tokens - 10
+        #max_length = max_length - self.ea_layer.total_tokens - 10
 
         if temperature > 1e-5:
             logits_processor = prepare_logits_processor(temperature=temperature, top_p=top_p, top_k=top_k)
@@ -390,7 +390,7 @@ class EaModel(nn.Module):
     ):
         if is_llama3:
             stop_token_id = self.tokenizer.convert_tokens_to_ids("<|eot_id|>")
-        max_length=max_length-self.ea_layer.total_tokens-10
+        #max_length=max_length-self.ea_layer.total_tokens-10
 
         if temperature > 1e-5:
             logits_processor = prepare_logits_processor(temperature=temperature, top_p=top_p, top_k=top_k)
@@ -519,7 +519,7 @@ class EaModel(nn.Module):
     ):
         if is_llama3:
             stop_token_id = self.tokenizer.convert_tokens_to_ids("<|eot_id|>")
-        max_length = max_length - self.ea_layer.total_tokens - 10
+        #max_length = max_length - self.ea_layer.total_tokens - 10
 
         if temperature > 1e-5:
             logits_processor = prepare_logits_processor(temperature=temperature, top_p=top_p, top_k=top_k)
