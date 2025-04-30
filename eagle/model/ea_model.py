@@ -463,7 +463,7 @@ class EaModel(nn.Module):
 
             if hasattr(self, 'timer'): self.timer._hist['bonus tokens'].append(accept_length.item())
             if hasattr(self, 'timer') and not self.timer.disable:
-                n_new_tokens = accept_length.item()
+                n_new_tokens = accept_length.item() + 1
                 for i in range(n_new_tokens):
                     if i == n_new_tokens - 1:
                         self.timer._hist[f'alpha{i}'].append(0)
