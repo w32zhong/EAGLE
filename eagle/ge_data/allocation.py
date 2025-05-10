@@ -13,7 +13,12 @@ e = 68000 - 1
 #e = 68 - 1
 #gpus = [[0],[1],[2],[3],[4],[5],[6],[7]]
 
-gpus=[[0],[1],[2],[3]]
+### CHANGE THESE ###
+script = "ge_data_all_vicuna.py"
+script = "ge_data_all_llama3.py"
+gpus=[[0],[1]]
+
+
 num_p = len(gpus)
 outdir = '{}/sharegpt_{}_{}_mufp16'.format(args.outdir,s,e)
 
@@ -55,8 +60,7 @@ for i in range(num_p):
     gpu_index = gpus[i]
     gpu_index_str = ' '.join(map(str, gpu_index))
     # gpu_index_str='['+gpu_index_str+']'
-    command = "python ge_data_all_vicuna.py --start={} --end={} --index={} --gpu_index {} --outdir {}".format(start, end, index,
-                                                                                                gpu_index_str, outdir)
+    command = "python {} --start={} --end={} --index={} --gpu_index {} --outdir {}".format(script, start, end, index, gpu_index_str, outdir)
     commands.append(command)
 # run_command(commands[0])
 # commands=commands[:1]

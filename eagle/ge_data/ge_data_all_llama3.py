@@ -16,7 +16,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from datasets import load_dataset
 
 
-bigname = "/home/lyh/weights/hf/llama3chat/8B/"
+bigname = "meta-llama/Meta-Llama-3-8B-Instruct"
 #bigname = "/home/lyh/weights/hf/llama2chat/7B/"
 
 
@@ -39,7 +39,12 @@ def build_dataset_rank(
         tokenizer, split="train",
         select=None,
 ):
-    ds = load_dataset('json', data_files="/home/lyh/data/hf/Shargpt/ShareGPT_V4.3_unfiltered_cleaned_split.json")
+    #ds = load_dataset('json', data_files="/home/lyh/data/hf/Shargpt/ShareGPT_V4.3_unfiltered_cleaned_split.json")
+    ds = load_dataset(
+        path="Aeala/ShareGPT_Vicuna_unfiltered",
+        data_files=["ShareGPT_V4.3_unfiltered_cleaned_split.json"],
+        revision='8b0048ad6ae8c22f46a78c15559dec98feef5539'
+    )
     ds = ds['train']
     ds = ds.shuffle(seed=42)
     ds1 = ds.select(range(args.start, args.end))
