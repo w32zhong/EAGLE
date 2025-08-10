@@ -67,7 +67,7 @@ from transformers import get_linear_schedule_with_warmup, AutoConfig
 if accelerator.is_main_process:
     import wandb
 
-    wandb.init(project="ess", entity="yuhui-li", config=train_config)
+    wandb.init(project="eagle4", config=train_config)
 
 baseconfig = AutoConfig.from_pretrained(args.basepath)
 
@@ -320,6 +320,7 @@ if accelerator.is_main_process:
 
 config = EConfig.from_pretrained(train_config["config_path"])
 model = Model(config, load_emb=True, path=args.basepath)
+print(model)
 
 criterion = nn.SmoothL1Loss(reduction="none")
 optimizer = optim.AdamW(model.parameters(), lr=train_config["lr"], betas=(train_config["b1"], train_config["b2"]))
@@ -341,6 +342,7 @@ else:
         model, head, optimizer, train_loader, test_loader
     )
 # accelerator.load_state("checkpoints/state_5")
+g_step = 0
 for epoch in range(num_epochs + 1):
     top_3acc = [0 for _ in range(3)]
     correct = 0
@@ -367,26 +369,34 @@ for epoch in range(num_epochs + 1):
             if is_warmup:
                 scheduler.step()
 
-        with torch.no_grad():
-            _, predicted = torch.max(out_head, 2)
-            _, target = torch.max(target_head, 2)
-            ct = loss_mask.sum().item()
-            cc = ((predicted == target) * loss_mask.squeeze()).sum().item()
-            out_head = out_head.view(-1, target_head.shape[-1])[loss_mask.view(-1) == 1]
-            target = target.view(-1)[loss_mask.view(-1) == 1]
-            topkacc = top_accuracy(out_head, target, (1, 2, 3))
-            for top_i in range(len(topkacc)):
-                top_3acc[top_i] += topkacc[top_i]
-            total += ct
-            correct += cc
-        if accelerator.is_main_process and ct != 0:
-            logdict = {"train/lr": optimizer.optimizer.param_groups[0]["lr"], "train/vloss": vloss.item(),
-                       "train/ploss": ploss.item(), "train/loss": loss.item(), "train/acc": cc / ct}
-            for id, i in enumerate(top_3acc):
-                logdict[f'train/top_{id + 1}_acc'] = topkacc[id].item() / ct
-            wandb.log(logdict)
-            # for id,i in enumerate(top_3acc):
-            #     wandb.log({f'train/top_{id+1}_acc':topkacc[id].item()/ct})
+        if g_step % 100 == 0:
+            with torch.no_grad():
+                _, predicted = torch.max(out_head, 2)
+                _, target = torch.max(target_head, 2)
+                ct = loss_mask.sum().item()
+                cc = ((predicted == target) * loss_mask.squeeze()).sum().item()
+                out_head = out_head.view(-1, target_head.shape[-1])[loss_mask.view(-1) == 1]
+                target = target.view(-1)[loss_mask.view(-1) == 1]
+                topkacc = top_accuracy(out_head, target, (1, 2, 3))
+                for top_i in range(len(topkacc)):
+                    top_3acc[top_i] += topkacc[top_i]
+                total += ct
+                correct += cc
+            if accelerator.is_main_process and ct != 0:
+                logdict = {
+                    "train/g_step": g_step,
+                    "train/lr": optimizer.optimizer.param_groups[0]["lr"],
+                    "train/vloss": vloss.item(),
+                    "train/ploss": ploss.item(),
+                    "train/loss": loss.item(),
+                    "train/acc": cc / ct
+                }
+                for id, i in enumerate(top_3acc):
+                    logdict[f'train/top_{id + 1}_acc'] = topkacc[id].item() / ct
+
+                wandb.log(logdict)
+                print(logdict)
+        g_step += 1
 
         del ploss, vloss
         epoch_loss += loss.item()
