@@ -439,7 +439,8 @@ class EaModel(nn.Module):
 
             if hasattr(self, 'timer'): self.timer.start('verify')
             draft_tokens=draft_tokens.to(input_ids.device)
-            self.timer._hist['verify length'].append(draft_tokens.shape[1])
+            if hasattr(self, 'timer'): 
+                self.timer._hist['verify length'].append(draft_tokens.shape[1])
             #with Timer("tree_decoding"):
             logits, hidden_state_new, outputs = tree_decoding(
                 self,

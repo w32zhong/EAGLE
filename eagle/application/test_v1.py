@@ -9,7 +9,7 @@ import transformers
 print(transformers.__path__)
 
 model = EaModel.from_pretrained(
-    base_model_path='meta-llama/Llama-2-7b-chat-hf',
+    base_model_path='/root/.cache/huggingface/hub/models--meta-llama--Llama-2-7b-chat-hf/snapshots/f5db02db724555f92da89c216ac04704f23d4590/',
     ea_model_path='yuhuili/EAGLE-llama2-chat-7B',
     torch_dtype=torch.bfloat16,
     device_map="auto",
@@ -32,10 +32,11 @@ print(model.tokenizer.batch_decode(input_ids))
 past_len = input_ids.shape[1]
 start_time = time.time()
 cnt_tokens = 0
-#for output_ids in model.ea_generate(input_ids):
-for output_ids in model.eagenerate(input_ids):
+cnt = 0
+for output_ids in model.ea_generate(input_ids):
     decode_ids = output_ids[0, past_len:].tolist()
     cnt_tokens += len(decode_ids)
+    cnt += 1
     past_len = output_ids.shape[-1]
     text = model.tokenizer.decode(decode_ids)
     print(text, end=' ', flush=True)
@@ -43,3 +44,4 @@ print()
 
 time_delta = time.time() - start_time
 print('e2e speed:', time_delta, cnt_tokens, cnt_tokens / time_delta)
+print('avg acclen:', cnt_tokens / cnt)
