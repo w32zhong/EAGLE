@@ -392,34 +392,36 @@ for epoch in range(num_epochs + 1):
                 scheduler.step()
             time.sleep(0.1)
 
-        if g_step % 100 == 0:
-            with torch.no_grad():
-                _, predicted = torch.max(out_head, 2)
-                _, target = torch.max(target_head, 2)
-                ct = loss_mask.sum().item()
-                cc = ((predicted == target) * loss_mask.squeeze()).sum().item()
-                out_head = out_head.view(-1, target_head.shape[-1])[loss_mask.view(-1) == 1]
-                target = target.view(-1)[loss_mask.view(-1) == 1]
-                topkacc = top_accuracy(out_head, target, (1, 2, 3))
-                for top_i in range(len(topkacc)):
-                    top_3acc[top_i] += topkacc[top_i]
-                total += ct
-                correct += cc
-            if accelerator.is_main_process and ct != 0:
-                logdict = {
-                    "train/g_step": g_step,
-                    "train/lr": optimizer.optimizer.param_groups[0]["lr"],
-                    "train/vloss": vloss.item(),
-                    "train/ploss": ploss.item(),
-                    "train/loss": loss.item(),
-                    "train/acc": cc / ct
-                }
-                for id, i in enumerate(top_3acc):
-                    logdict[f'train/top_{id + 1}_acc'] = topkacc[id].item() / ct
+        if accelerator.sync_gradients:
+            logging = (g_step % 25 == 0)
+            if logging:
+                with torch.no_grad():
+                    _, predicted = torch.max(out_head, 2)
+                    _, target = torch.max(target_head, 2)
+                    ct = loss_mask.sum().item()
+                    cc = ((predicted == target) * loss_mask.squeeze()).sum().item()
+                    out_head = out_head.view(-1, target_head.shape[-1])[loss_mask.view(-1) == 1]
+                    target = target.view(-1)[loss_mask.view(-1) == 1]
+                    topkacc = top_accuracy(out_head, target, (1, 2, 3))
+                    for top_i in range(len(topkacc)):
+                        top_3acc[top_i] += topkacc[top_i]
+                    total += ct
+                    correct += cc
+                if accelerator.is_main_process and ct != 0:
+                    logdict = {
+                        "train/global_step": g_step,
+                        "train/lr": optimizer.optimizer.param_groups[0]["lr"],
+                        "train/vloss": vloss.item(),
+                        "train/ploss": ploss.item(),
+                        "train/loss": loss.item(),
+                        "train/acc": cc / ct
+                    }
+                    for id, i in enumerate(top_3acc):
+                        logdict[f'train/top_{id + 1}_acc'] = topkacc[id].item() / ct
 
-                wandb.log(logdict)
-                print(logdict)
-        g_step += 1
+                    wandb.log(logdict)
+                    print(logdict)
+            g_step += 1
 
         del ploss, vloss
         epoch_loss += loss.item()
