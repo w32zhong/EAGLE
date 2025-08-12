@@ -312,8 +312,8 @@ datapath = list_files(train_config["datapath"])
 traindatapath = datapath[:int(len(datapath) * 0.95)]
 testdatapath = datapath[int(len(datapath) * 0.95):]
 
-#traindataset = CustomDataset(traindatapath, transform=aug)
-traindataset = CustomDataset(traindatapath, transform=None)
+traindataset = CustomDataset(traindatapath, transform=aug)
+#traindataset = CustomDataset(traindatapath, transform=None)
 testdataset = CustomDataset(testdatapath)
 tg = torch.Generator()
 tg.manual_seed(0)
