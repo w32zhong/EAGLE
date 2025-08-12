@@ -423,6 +423,7 @@ class LlamaDecoderLayer(nn.Module):
         """
 
         residual = hidden_states
+        #print('H0', hidden_states.sum())
 
         if self.index != 0:
             hidden_states = self.input_layernorm(hidden_states)
@@ -436,12 +437,14 @@ class LlamaDecoderLayer(nn.Module):
             output_attentions=output_attentions,
             use_cache=use_cache,
         )
+        #print('H1', hidden_states.sum())
         hidden_states = residual + hidden_states
 
         # Fully Connected
         residual = hidden_states
         hidden_states = self.post_attention_layernorm(hidden_states)
         hidden_states = self.mlp(hidden_states)
+        #print('H2', hidden_states.sum())
         hidden_states = residual + hidden_states
 
         outputs = (hidden_states,)

@@ -23,7 +23,7 @@ train_config = {
     "p_w": 0.1,
     "v_w": 1.0,
     "head_w": 0.1,
-    "num_workers": 2,
+    "num_workers": 1,
     "embeding": True,
     "act": "No",
     "data_noise": True,
@@ -51,6 +51,8 @@ from accelerate import Accelerator
 from accelerate.utils import set_seed
 
 set_seed(0)
+#torch.use_deterministic_algorithms(True)
+
 accelerator = Accelerator(mixed_precision='bf16',
                           gradient_accumulation_steps=train_config["gradient_accumulation_steps"])
 from ..model.cnets import Model
@@ -103,7 +105,7 @@ def list_files(path):
         for file in files:
             file_path = os.path.join(root, file)
             datapath.append(file_path)
-    return datapath
+    return list(sorted(datapath))
 
 
 class AddGaussianNoise:
@@ -167,6 +169,7 @@ class CustomDataset(Dataset):
         new_data["target"] = target
         new_data["hidden_state_big"] = hidden_state
         new_data["input_ids"] = input_ids_target
+        new_data["data_path"] = self.data[index]
 
 
         if self.transform:
@@ -201,12 +204,14 @@ class DataCollatorWithPadding:
             [item['attention_mask'] + [0] * (max_length - len(item['attention_mask'])) for item in features])
         # batch_loss_mask = torch.ones_like(batch_loss_mask)
         # batch_attention_mask=torch.ones_like(batch_attention_mask)
+        batch_data_ids = [item['data_path'] for item in features]
         batch = {
             "input_ids": batch_input_ids,
             "hidden_states": batch_hidden_states,
             "target": batch_target,
             "attention_mask": batch_attention_mask,
             "loss_mask": batch_loss_mask,
+            "data_ids": batch_data_ids
         }
         return batch
 
@@ -306,9 +311,12 @@ datapath = list_files(train_config["datapath"])
 traindatapath = datapath[:int(len(datapath) * 0.95)]
 testdatapath = datapath[int(len(datapath) * 0.95):]
 
-traindataset = CustomDataset(traindatapath, transform=aug)
+#traindataset = CustomDataset(traindatapath, transform=aug)
+traindataset = CustomDataset(traindatapath, transform=None)
 testdataset = CustomDataset(testdatapath)
-train_loader = DataLoader(traindataset, batch_size=train_config["bs"], shuffle=True,
+tg = torch.Generator()
+tg.manual_seed(0)
+train_loader = DataLoader(traindataset, batch_size=train_config["bs"], shuffle=True, generator=tg,
                           collate_fn=DataCollatorWithPadding(), num_workers=train_config["num_workers"],
                           pin_memory=True)
 test_loader = DataLoader(testdataset, batch_size=train_config["bs"], shuffle=False,
@@ -330,6 +338,15 @@ num_warmup_steps = train_config["num_warmup_steps"]
 total_steps = train_config["total_steps"]
 is_warmup = train_config["is_warmup"]
 
+def cmp_tensor_w_another(tensor):
+    try:
+        another_tensor = torch.load('/tmp/debug_cmp_tensor_w_another.pt')
+        print(torch.allclose(tensor.float(), another_tensor.float()))
+    except Exception as e:
+        print(e)
+        pass
+    torch.save(tensor, '/tmp/debug_cmp_tensor_w_another.pt')
+
 if is_warmup:
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=num_warmup_steps,
                                                 num_training_steps=total_steps)
@@ -342,6 +359,10 @@ else:
         model, head, optimizer, train_loader, test_loader
     )
 # accelerator.load_state("checkpoints/state_5")
+if accelerator.is_main_process:
+    init_out_dir = f"{args.cpdir}/state_init"
+    accelerator.save_state(output_dir=init_out_dir)
+    torch.save(model.state_dict(), os.path.join(init_out_dir, "ckpt.pt"))
 g_step = 0
 for epoch in range(num_epochs + 1):
     top_3acc = [0 for _ in range(3)]
@@ -368,6 +389,7 @@ for epoch in range(num_epochs + 1):
             optimizer.step()
             if is_warmup:
                 scheduler.step()
+            time.sleep(0.1)
 
         if g_step % 100 == 0:
             with torch.no_grad():
@@ -402,78 +424,79 @@ for epoch in range(num_epochs + 1):
         epoch_loss += loss.item()
         num_batches += 1
 
-    correct, total = torch.tensor(correct).cuda(), torch.tensor(total).cuda()
-    correct, total = accelerator.gather_for_metrics((correct, total))
-    correct, total = correct.sum().item(), total.sum().item()
-    epoch_loss /= num_batches
-    top_3acc = accelerator.gather_for_metrics(top_3acc)
+    #correct, total = torch.tensor(correct).cuda(), torch.tensor(total).cuda()
+    #correct, total = accelerator.gather_for_metrics((correct, total))
+    #correct, total = correct.sum().item(), total.sum().item()
+    #epoch_loss /= num_batches
+    #top_3acc = accelerator.gather_for_metrics(top_3acc)
+    #if accelerator.is_local_main_process:
+    #    for id, i in enumerate(top_3acc):
+    #        wandb.log({f'train/epochtop_{id + 1}_acc': i.sum().item() / total})
+    #if accelerator.is_local_main_process:
+    #    print('Epoch [{}/{}], Loss: {:.4f}'.format(epoch + 1, num_epochs, epoch_loss))
+    #    print('Train Accuracy: {:.2f}%'.format(100 * correct / total))
+    #    wandb.log({"train/epochacc": correct / total, "train/epochloss": epoch_loss})
+
+    #if (epoch + 1) % train_config["save_freq"]:
+    #    top_3acc = [0 for _ in range(3)]
+    #    correct = 0
+    #    total = 0
+    #    epoch_loss = 0
+    #    num_batches = 0
+    #    model.eval()
+
+    #    k_acc = [[] for i in range(5)]
+    #    for batch_idx, data in enumerate(tqdm(test_loader)):
+    #        with torch.no_grad():
+    #            if batch_idx < 10:
+    #                acces = getkacc(model, data, head, max_length=5)
+    #                for i in range(len(acces)):
+    #                    k_acc[i].append(acces[i])
+    #            predict = model(data["hidden_states"], input_ids=data["input_ids"],
+    #                            attention_mask=data["attention_mask"])
+    #            target_head = head(data["target"])
+    #            target_p = nn.Softmax(dim=2)(target_head)
+    #            target_p = target_p.detach()
+    #            loss_mask = data["loss_mask"][:, :, None]
+    #            vloss, ploss, out_head = compute_loss(data["target"], target_p, predict, loss_mask)
+    #            loss = train_config["v_w"] * vloss + train_config["p_w"] * ploss
+    #            _, predicted = torch.max(out_head, 2)
+    #            _, target = torch.max(target_head, 2)
+    #            ct = loss_mask.sum().item()
+    #            cc = ((predicted == target) * loss_mask.squeeze()).sum().item()
+    #            out_head = out_head.view(-1, target_head.shape[-1])[loss_mask.view(-1) == 1]
+    #            target = target.view(-1)[loss_mask.view(-1) == 1]
+    #            topkacc = top_accuracy(out_head, target, (1, 2, 3))
+    #            for top_i in range(len(topkacc)):
+    #                top_3acc[top_i] += topkacc[top_i]
+    #            total += ct
+    #            correct += cc
+    #        epoch_loss += loss.item()
+    #        num_batches += 1
+
+    #    mean_acces = []
+    #    for id, i in enumerate(k_acc):
+    #        mean_acc = np.array(i).mean()
+    #        mean_acc = torch.tensor(mean_acc).cuda()
+    #        mean_acces.append(mean_acc)
+
+    #    mean_acces = accelerator.gather_for_metrics(mean_acces)
+    #    if accelerator.is_local_main_process:
+    #        for id, i in enumerate(mean_acces):
+    #            mean_acc = i.mean().item()
+    #            wandb.log({f"test/{id}_acc": mean_acc})
+
+    #    correct, total = torch.tensor(correct).cuda(), torch.tensor(total).cuda()
+    #    correct, total = accelerator.gather_for_metrics((correct, total))
+    #    correct, total = correct.sum().item(), total.sum().item()
+    #    top_3acc = accelerator.gather_for_metrics(top_3acc)
+    #    if accelerator.is_local_main_process:
+    #        for id, i in enumerate(top_3acc):
+    #            wandb.log({f'test/top_{id + 1}_acc': i.sum().item() / total})
+    #    epoch_loss /= num_batches
+
     if accelerator.is_local_main_process:
-        for id, i in enumerate(top_3acc):
-            wandb.log({f'train/epochtop_{id + 1}_acc': i.sum().item() / total})
-    if accelerator.is_local_main_process:
-        print('Epoch [{}/{}], Loss: {:.4f}'.format(epoch + 1, num_epochs, epoch_loss))
-        print('Train Accuracy: {:.2f}%'.format(100 * correct / total))
-        wandb.log({"train/epochacc": correct / total, "train/epochloss": epoch_loss})
-
-    if (epoch + 1) % train_config["save_freq"]:
-        top_3acc = [0 for _ in range(3)]
-        correct = 0
-        total = 0
-        epoch_loss = 0
-        num_batches = 0
-        model.eval()
-
-        k_acc = [[] for i in range(5)]
-        for batch_idx, data in enumerate(tqdm(test_loader)):
-            with torch.no_grad():
-                if batch_idx < 10:
-                    acces = getkacc(model, data, head, max_length=5)
-                    for i in range(len(acces)):
-                        k_acc[i].append(acces[i])
-                predict = model(data["hidden_states"], input_ids=data["input_ids"],
-                                attention_mask=data["attention_mask"])
-                target_head = head(data["target"])
-                target_p = nn.Softmax(dim=2)(target_head)
-                target_p = target_p.detach()
-                loss_mask = data["loss_mask"][:, :, None]
-                vloss, ploss, out_head = compute_loss(data["target"], target_p, predict, loss_mask)
-                loss = train_config["v_w"] * vloss + train_config["p_w"] * ploss
-                _, predicted = torch.max(out_head, 2)
-                _, target = torch.max(target_head, 2)
-                ct = loss_mask.sum().item()
-                cc = ((predicted == target) * loss_mask.squeeze()).sum().item()
-                out_head = out_head.view(-1, target_head.shape[-1])[loss_mask.view(-1) == 1]
-                target = target.view(-1)[loss_mask.view(-1) == 1]
-                topkacc = top_accuracy(out_head, target, (1, 2, 3))
-                for top_i in range(len(topkacc)):
-                    top_3acc[top_i] += topkacc[top_i]
-                total += ct
-                correct += cc
-            epoch_loss += loss.item()
-            num_batches += 1
-
-        mean_acces = []
-        for id, i in enumerate(k_acc):
-            mean_acc = np.array(i).mean()
-            mean_acc = torch.tensor(mean_acc).cuda()
-            mean_acces.append(mean_acc)
-
-        mean_acces = accelerator.gather_for_metrics(mean_acces)
-        if accelerator.is_local_main_process:
-            for id, i in enumerate(mean_acces):
-                mean_acc = i.mean().item()
-                wandb.log({f"test/{id}_acc": mean_acc})
-
-        correct, total = torch.tensor(correct).cuda(), torch.tensor(total).cuda()
-        correct, total = accelerator.gather_for_metrics((correct, total))
-        correct, total = correct.sum().item(), total.sum().item()
-        top_3acc = accelerator.gather_for_metrics(top_3acc)
-        if accelerator.is_local_main_process:
-            for id, i in enumerate(top_3acc):
-                wandb.log({f'test/top_{id + 1}_acc': i.sum().item() / total})
-        epoch_loss /= num_batches
-        if accelerator.is_local_main_process:
-            print('Test Epoch [{}/{}], Loss: {:.4f}'.format(epoch + 1, num_epochs, epoch_loss))
-            print('Test Accuracy: {:.2f}%'.format(100 * correct / total))
-            wandb.log({"test/epochacc": correct / total, "test/epochloss": epoch_loss})
-            accelerator.save_state(output_dir=f"{args.cpdir}/state_{epoch}")
+        #print('Test Epoch [{}/{}], Loss: {:.4f}'.format(epoch + 1, num_epochs, epoch_loss))
+        #print('Test Accuracy: {:.2f}%'.format(100 * correct / total))
+        #wandb.log({"test/epochacc": correct / total, "test/epochloss": epoch_loss})
+        accelerator.save_state(output_dir=f"{args.cpdir}/state_{epoch}")
