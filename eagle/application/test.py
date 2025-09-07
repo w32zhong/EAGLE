@@ -9,7 +9,7 @@ import transformers
 print(transformers.__path__)
 
 model = EaModel.from_pretrained(
-    base_model_path='/root/.cache/huggingface/hub/models--meta-llama--Llama-2-7b-chat-hf/snapshots/f5db02db724555f92da89c216ac04704f23d4590/',
+    base_model_path='/mnt/cache/huggingface/hub/models--meta-llama--Llama-2-7b-chat-hf/snapshots/f5db02db724555f92da89c216ac04704f23d4590/',
     ea_model_path='yuhuili/EAGLE-llama2-chat-7B',
     torch_dtype=torch.bfloat16,
     device_map="auto",
@@ -24,7 +24,7 @@ conv = get_conversation_template("llama-2-chat")
 #conv.system_message = sys_p
 conv.append_message(conv.roles[0], question)
 conv.append_message(conv.roles[1], None)
-prompt = conv.get_prompt() + " "
+prompt = conv.get_prompt()
 
 input_ids = model.tokenizer([prompt], return_tensors="pt").input_ids
 input_ids = input_ids.to('cuda:0')
@@ -32,10 +32,11 @@ print(model.tokenizer.batch_decode(input_ids))
 past_len = input_ids.shape[1]
 start_time = time.time()
 cnt_tokens = 0
+accept_length = []
 cnt = 0
 for output_ids in model.ea_generate(input_ids):
     decode_ids = output_ids[0, past_len:].tolist()
-    cnt_tokens += len(decode_ids)
+    accept_length.append(len(decode_ids))
     cnt += 1
     past_len = output_ids.shape[-1]
     text = model.tokenizer.decode(decode_ids)
@@ -43,5 +44,8 @@ for output_ids in model.ea_generate(input_ids):
 print()
 
 time_delta = time.time() - start_time
-print('e2e speed:', time_delta, cnt_tokens, cnt_tokens / time_delta)
-print('avg acclen:', cnt_tokens / cnt)
+print('e2e speed:', sum(accept_length) / time_delta)
+print('max accept_length:', max(accept_length))
+print('min accept_length:', min(accept_length))
+print('avg accept_length:', round(sum(accept_length) / cnt, 3))
+print(accept_length)
