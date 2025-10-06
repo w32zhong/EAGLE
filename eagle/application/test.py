@@ -9,7 +9,7 @@ import transformers
 print(transformers.__path__)
 
 model = EaModel.from_pretrained(
-    base_model_path='/mnt/cache/huggingface/hub/models--meta-llama--Llama-2-7b-chat-hf/snapshots/f5db02db724555f92da89c216ac04704f23d4590/',
+    base_model_path='meta-llama/Llama-2-7b-chat-hf',
     ea_model_path='yuhuili/EAGLE-llama2-chat-7B',
     torch_dtype=torch.bfloat16,
     device_map="auto",
