@@ -122,72 +122,73 @@ def get_model_answers(
 
     question = questions[0]
 
-    # warmup
-    for _ in range(3):
-        torch.manual_seed(0)
+    # # warmup
+    # for _ in range(3):
+    #     torch.manual_seed(0)
 
-        conv = get_conversation_template("llama-2-chat")
-        sys_p = "You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe.  Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.\n\nIf a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information."
-        conv.system_message = sys_p
-        turns = []
-        idxs = []
-        new_tokens = []
-        wall_time = []
-        for j in range(len(question["turns"])):
-            qs = question["turns"][j]
-            conv.append_message(conv.roles[0], qs)
-            conv.append_message(conv.roles[1], None)
-            prompt = conv.get_prompt() + " "
-            input_ids = tokenizer([prompt]).input_ids
+    #     conv = get_conversation_template("llama-2-chat")
+    #     sys_p = "You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe.  Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.\n\nIf a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information."
+    #     conv.system_message = sys_p
+    #     turns = []
+    #     idxs = []
+    #     new_tokens = []
+    #     wall_time = []
+    #     for j in range(len(question["turns"])):
+    #         qs = question["turns"][j]
+    #         conv.append_message(conv.roles[0], qs)
+    #         conv.append_message(conv.roles[1], None)
+    #         prompt = conv.get_prompt() + " "
+    #         input_ids = tokenizer([prompt]).input_ids
 
-            # try:
-            torch.cuda.synchronize()
-            start_time = time.time()
+    #         # try:
+    #         torch.cuda.synchronize()
+    #         start_time = time.time()
 
-            output_ids, new_token, idx = model.eagenerate(
-                torch.as_tensor(input_ids).cuda(),
-                temperature=temperature,
-                log=True
-            )
-            torch.cuda.synchronize()
-            total_time = time.time() - start_time
-            output_ids = output_ids[0][len(input_ids[0]):]
-            # be consistent with the template's stop_token_ids
-            if conv.stop_token_ids:
-                stop_token_ids_index = [
-                    i
-                    for i, id in enumerate(output_ids)
-                    if id in conv.stop_token_ids
-                ]
-                if len(stop_token_ids_index) > 0:
-                    output_ids = output_ids[: stop_token_ids_index[0]]
+    #         output_ids, new_token, idx = model.eagenerate(
+    #             torch.as_tensor(input_ids).cuda(),
+    #             temperature=temperature,
+    #             log=True
+    #         )
+    #         torch.cuda.synchronize()
+    #         total_time = time.time() - start_time
+    #         output_ids = output_ids[0][len(input_ids[0]):]
+    #         # be consistent with the template's stop_token_ids
+    #         if conv.stop_token_ids:
+    #             stop_token_ids_index = [
+    #                 i
+    #                 for i, id in enumerate(output_ids)
+    #                 if id in conv.stop_token_ids
+    #             ]
+    #             if len(stop_token_ids_index) > 0:
+    #                 output_ids = output_ids[: stop_token_ids_index[0]]
 
-            output = tokenizer.decode(
-                output_ids,
-                spaces_between_special_tokens=False,
-            )
-            conv.stop_str = "</s>"
-            if conv.stop_str and output.find(conv.stop_str) > 0:
-                output = output[: output.find(conv.stop_str)]
-            for special_token in tokenizer.special_tokens_map.values():
-                if isinstance(special_token, list):
-                    for special_tok in special_token:
-                        output = output.replace(special_tok, "")
-                else:
-                    output = output.replace(special_token, "")
-            output = output.strip()
+    #         output = tokenizer.decode(
+    #             output_ids,
+    #             spaces_between_special_tokens=False,
+    #         )
+    #         conv.stop_str = "</s>"
+    #         if conv.stop_str and output.find(conv.stop_str) > 0:
+    #             output = output[: output.find(conv.stop_str)]
+    #         for special_token in tokenizer.special_tokens_map.values():
+    #             if isinstance(special_token, list):
+    #                 for special_tok in special_token:
+    #                     output = output.replace(special_tok, "")
+    #             else:
+    #                 output = output.replace(special_token, "")
+    #         output = output.strip()
 
-            if conv.name == "xgen" and output.startswith("Assistant:"):
-                output = output.replace("Assistant:", "", 1).strip()
+    #         if conv.name == "xgen" and output.startswith("Assistant:"):
+    #             output = output.replace("Assistant:", "", 1).strip()
 
-            turns.append(output)
-            idxs.append(int(idx))
-            new_tokens.append(int(new_token))
-            wall_time.append(total_time)
-            conv.messages[-1][-1] = output
-    print('Warmup done')
+    #         turns.append(output)
+    #         idxs.append(int(idx))
+    #         new_tokens.append(int(new_token))
+    #         wall_time.append(total_time)
+    #         conv.messages[-1][-1] = output
+    # print('Warmup done')
 
-    # questions=questions[6:]
+    total_accept_length = total_iterations = 0
+    #questions=questions[:1]
     for question in tqdm(questions):
 
         choices = []
@@ -210,7 +211,7 @@ def get_model_answers(
 
                 torch.cuda.synchronize()
                 start_time = time.time()
-                output_ids, new_token, idx = model.eagenerate(
+                output_ids, new_token, idx, ACC, ITER = model.eagenerate(
                     torch.as_tensor(input_ids).cuda(),
                     temperature=temperature,
                     log=True
@@ -218,6 +219,9 @@ def get_model_answers(
                 torch.cuda.synchronize()
                 total_time = time.time() - start_time
                 output_ids = output_ids[0][len(input_ids[0]):]
+
+                total_accept_length += ACC
+                total_iterations += ITER
 
                 if conv.stop_token_ids:
                     stop_token_ids_index = [
@@ -266,6 +270,8 @@ def get_model_answers(
             }
             fout.write(json.dumps(ans_json) + "\n")
 
+        print('running accept len.:', total_accept_length / total_iterations)
+
 
 def reorg_answer_file(answer_file):
     """Sort by question id and de-duplication"""
@@ -313,7 +319,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--max-new-token",
         type=int,
-        default=1024,
+        default=2048,
         help="The maximum number of new generated tokens.",
     )
     parser.add_argument(
