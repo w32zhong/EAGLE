@@ -2,11 +2,10 @@ import argparse
 import deepspeed
 
 parser = argparse.ArgumentParser(description='sp')
-parser.add_argument('--basepath', type=str, default='/home/lyh/weights/hf/llama31chat/8B/')
-parser.add_argument('--trainpath', type=str,
-                    default="/home/lyh/code/nlp/developing/vllmbase/vllm/gedata/l318b.jsonl")
+parser.add_argument('--basepath', type=str, default='Qwen/Qwen3-0.6B')
+parser.add_argument('--trainpath', type=str, default="./sharegpt_tiny.jsonl")
 parser.add_argument('--testpath', type=str,
-                    default="/home/lyh/code/nlp/developing/vllmbase/vllm/gedata/0318.json")
+                    default=None)
 parser.add_argument('--savedir', type=str, default='0')
 parser.add_argument("--local_rank", type=int, default=-1, help="local_rank for distributed training on gpus")
 parser = deepspeed.add_config_arguments(parser)
@@ -21,7 +20,7 @@ train_config = {
     "bs": ds_config["train_micro_batch_size_per_gpu"],
     "num_epochs": 40,
     "num_workers": 2,
-    "max_len": 2048,
+    "max_len": 1024, # was 2048 before
     "config_path": "config.json",
     "gradient_checkpoint": True
 }
@@ -55,13 +54,12 @@ from transformers import PreTrainedTokenizerBase, get_linear_schedule_with_warmu
 def build_dataset_rank(
         tokenizer, datapath
 ):
-
     ds = load_dataset('json', data_files=datapath)
     ds = ds['train']
     ds = ds.shuffle(seed=42)
     ds1 = ds
     original_columns1 = ds1.column_names
-    num_proc = 8
+    num_proc = 1
 
     def preprocess_function(examples):
         new_examples = {
@@ -75,20 +73,20 @@ def build_dataset_rank(
                  "content": "You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe.  Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.\n\nIf a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information."},
             ]
             convroles = ["user", "assistant"]
-            roles = {"human": "user", "gpt": "assistant"}
+            roles = {"user": "user", "assistant": "assistant"}
             source = examples['conversations'][i]
             if not source:
                 continue
-            if roles[source[0]["from"]] != "user":
+            if roles[source[0]["role"]] != "user":
                 # Skip the first one if it is not from human
                 source = source[1:]
             for j, sentence in enumerate(source):
-                role = roles[sentence["from"]]
+                role = roles[sentence["role"]]
                 assert role == convroles[j % 2], f"{i}"
                 # if sentence["from"]=="gpt":
                 #     sentence["value"]=" "+sentence["value"]
                 messages.append(
-                    {"role": role, "content": sentence["value"]}
+                    {"role": role, "content": sentence["content"]}
                 )
             conversation = tokenizer.apply_chat_template(
                 messages,
@@ -202,13 +200,18 @@ class DataCollatorWithPadding:
         return batch
 
 
-tokenizer = AutoTokenizer.from_pretrained(args.basepath)
+#tokenizer = AutoTokenizer.from_pretrained(args.basepath)
+tokenizer_path ='meta-llama/Llama-3.1-8B-Instruct'
+tokenizer = AutoTokenizer.from_pretrained(tokenizer_path) # to match separator strings
 traindataset = build_dataset_rank(tokenizer, args.trainpath)
-testdataset = build_dataset_rank(tokenizer, args.testpath)
+#testdataset = build_dataset_rank(tokenizer, args.testpath)
 
 config = EConfig.from_pretrained(train_config["config_path"])
-model = Model(config, ds_config, train_config, path=args.basepath, load_emb=True, load_head=True)
-model.scandata(args.trainpath, args.basepath)
+
+from huggingface_hub import snapshot_download
+path = snapshot_download(args.basepath)
+model = Model(config, ds_config, train_config, path=path, load_emb=True, load_head=True)
+model.scandata(args.trainpath, tokenizer_path)
 
 
 criterion = nn.SmoothL1Loss(reduction="none")
@@ -220,20 +223,21 @@ model_engine, optimizer, _, _ = deepspeed.initialize(args=args,
                                                      model_parameters=model.parameters(),
                                                      )
 
+
 global_rank = deepspeed.comm.get_rank()
 rank = deepspeed.comm.get_local_rank()
 world_size = deepspeed.comm.get_world_size()
 if global_rank == 0:
-    import wandb
-
-    wandb.login(key="")
-    wandb.init(project="l382", entity="yuhui-li", config=ds_config)
+    pass
+    #import wandb
+    #wandb.login(key="")
+    #wandb.init(project="l382", entity="yuhui-li", config=ds_config)
 
 os.makedirs(args.savedir, exist_ok=True)
 
-sampler = DistributedSampler(testdataset, num_replicas=world_size, rank=global_rank, shuffle=False)
-test_loader = DataLoader(testdataset, batch_size=train_config["bs"], sampler=sampler, num_workers=4, pin_memory=True,
-                         collate_fn=DataCollatorWithPadding())
+#sampler = DistributedSampler(testdataset, num_replicas=world_size, rank=global_rank, shuffle=False)
+#test_loader = DataLoader(testdataset, batch_size=train_config["bs"], sampler=sampler, num_workers=4, pin_memory=True,
+#                         collate_fn=DataCollatorWithPadding())
 
 train_sampler = DistributedSampler(traindataset, num_replicas=world_size, rank=global_rank, shuffle=True)
 train_loader = DataLoader(traindataset, batch_size=train_config["bs"], sampler=train_sampler, num_workers=4,
@@ -295,57 +299,57 @@ for epoch in range(start_epoch, num_epochs):
                 logdict[f"train/ploss_{i}"] = plosses[i].item()
             for i in range(len(acces)):
                 logdict[f"train/acc_{i}"] = acces[i]
-            wandb.log(logdict)
+            print(logdict)
         epoch_acces = [epoch_acces[i] + [acces[i]] for i in range(len(acces))]
         epoch_plosses = [epoch_plosses[i] + [plosses[i].item()] for i in range(len(plosses))]
 
 
-    for i in range(len(epoch_acces)):
-        acc_i = torch.tensor(epoch_acces[i]).cuda().mean()
-        deepspeed.comm.all_reduce(acc_i, op=deepspeed.comm.ReduceOp.AVG)
-        acc_i = acc_i.item()
-        if global_rank == 0:
-            wandb.log({f"train/epochacc_{i}": acc_i})
-            print(f"Train Epoch [{epoch + 1}/{num_epochs}], position {i},  Acc: {acc_i:.2f}")
+    #for i in range(len(epoch_acces)):
+    #    acc_i = torch.tensor(epoch_acces[i]).cuda().mean()
+    #    deepspeed.comm.all_reduce(acc_i, op=deepspeed.comm.ReduceOp.AVG)
+    #    acc_i = acc_i.item()
+    #    if global_rank == 0:
+    #        wandb.log({f"train/epochacc_{i}": acc_i})
+    #        print(f"Train Epoch [{epoch + 1}/{num_epochs}], position {i},  Acc: {acc_i:.2f}")
 
-    for i in range(len(epoch_plosses)):
-        loss_i = torch.tensor(epoch_plosses[i]).cuda().mean()
-        deepspeed.comm.all_reduce(loss_i, op=deepspeed.comm.ReduceOp.AVG)
-        loss_i = loss_i.item()
-        if global_rank == 0:
-            wandb.log({f"train/epochploss_{i}": loss_i})
-            print(f"Train Epoch [{epoch + 1}/{num_epochs}], position {i}, pLoss: {loss_i:.2f}")
+    #for i in range(len(epoch_plosses)):
+    #    loss_i = torch.tensor(epoch_plosses[i]).cuda().mean()
+    #    deepspeed.comm.all_reduce(loss_i, op=deepspeed.comm.ReduceOp.AVG)
+    #    loss_i = loss_i.item()
+    #    if global_rank == 0:
+    #        wandb.log({f"train/epochploss_{i}": loss_i})
+    #        print(f"Train Epoch [{epoch + 1}/{num_epochs}], position {i}, pLoss: {loss_i:.2f}")
 
-    epoch_acces = [[] for _ in range(model.length)]
-    epoch_plosses = [[] for _ in range(model.length)]
+    #epoch_acces = [[] for _ in range(model.length)]
+    #epoch_plosses = [[] for _ in range(model.length)]
 
-    for batch_idx, data in enumerate(tqdm(test_loader)):
-        with torch.no_grad():
-            plosses, vlosses, acces = model_engine(input_ids=data["input_ids"].to(rank),
-                                                   attention_mask=data["attention_mask"].to(rank),
-                                                   loss_mask=data["loss_mask"],
-                                                   )
-            epoch_acces = [epoch_acces[i] + [acces[i]] for i in range(len(acces))]
-            epoch_plosses = [epoch_plosses[i] + [plosses[i].item()] for i in range(len(plosses))]
+    #for batch_idx, data in enumerate(tqdm(test_loader)):
+    #    with torch.no_grad():
+    #        plosses, vlosses, acces = model_engine(input_ids=data["input_ids"].to(rank),
+    #                                               attention_mask=data["attention_mask"].to(rank),
+    #                                               loss_mask=data["loss_mask"],
+    #                                               )
+    #        epoch_acces = [epoch_acces[i] + [acces[i]] for i in range(len(acces))]
+    #        epoch_plosses = [epoch_plosses[i] + [plosses[i].item()] for i in range(len(plosses))]
 
-    for i in range(len(epoch_acces)):
-        acc_i = torch.tensor(epoch_acces[i]).cuda().mean()
-        deepspeed.comm.all_reduce(acc_i, op=deepspeed.comm.ReduceOp.AVG)
-        acc_i = acc_i.item()
-        if global_rank == 0:
-            wandb.log({f"test/epochacc_{i}": acc_i})
-            print(f"Test Epoch [{epoch + 1}/{num_epochs}], position {i},  Acc: {acc_i:.2f}")
+    #for i in range(len(epoch_acces)):
+    #    acc_i = torch.tensor(epoch_acces[i]).cuda().mean()
+    #    deepspeed.comm.all_reduce(acc_i, op=deepspeed.comm.ReduceOp.AVG)
+    #    acc_i = acc_i.item()
+    #    if global_rank == 0:
+    #        wandb.log({f"test/epochacc_{i}": acc_i})
+    #        print(f"Test Epoch [{epoch + 1}/{num_epochs}], position {i},  Acc: {acc_i:.2f}")
 
-    for i in range(len(epoch_plosses)):
-        loss_i = torch.tensor(epoch_plosses[i]).cuda().mean()
-        deepspeed.comm.all_reduce(loss_i, op=deepspeed.comm.ReduceOp.AVG)
-        loss_i = loss_i.item()
-        if global_rank == 0:
-            wandb.log({f"test/epochploss_{i}": loss_i})
-            print(f"Test Epoch [{epoch + 1}/{num_epochs}], position {i}, pLoss: {loss_i:.2f}")
-    # clear out the redundance cahce after each step
-    torch.cuda.empty_cache()
+    #for i in range(len(epoch_plosses)):
+    #    loss_i = torch.tensor(epoch_plosses[i]).cuda().mean()
+    #    deepspeed.comm.all_reduce(loss_i, op=deepspeed.comm.ReduceOp.AVG)
+    #    loss_i = loss_i.item()
+    #    if global_rank == 0:
+    #        wandb.log({f"test/epochploss_{i}": loss_i})
+    #        print(f"Test Epoch [{epoch + 1}/{num_epochs}], position {i}, pLoss: {loss_i:.2f}")
+    ## clear out the redundance cahce after each step
+    #torch.cuda.empty_cache()
 
-    model_engine.save_16bit_model(f"{args.savedir}/state_{epoch}", exclude_frozen_parameters=True)
-    if epoch % 10 == 0:
-        deepspeed.DeepSpeedEngine.save_checkpoint(model_engine, save_dir=f"{args.savedir}/state_{epoch}")
+    #model_engine.save_16bit_model(f"{args.savedir}/state_{epoch}", exclude_frozen_parameters=True)
+    #if epoch % 10 == 0:
+    #    deepspeed.DeepSpeedEngine.save_checkpoint(model_engine, save_dir=f"{args.savedir}/state_{epoch}")
