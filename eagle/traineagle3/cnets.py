@@ -35,6 +35,100 @@ from safetensors import safe_open
 from datasets import load_dataset
 import multiprocessing
 
+def aaa(tokenizer, train_config, examples):
+    new_examples = {
+        # "conversation": [],
+        "input_ids": [],
+        "loss_mask": []
+    }
+    for i in range(len(examples['id'])):
+        messages = [
+            {"role": "system",
+             "content": "You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe.  Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.\n\nIf a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information."},
+        ]
+        convroles = ["user", "assistant"]
+        roles = {"user": "user", "assistant": "assistant"}
+        source = examples['conversations'][i]
+        if not source:
+            continue
+        if roles[source[0]["role"]] != "user":
+            # Skip the first one if it is not from human
+            source = source[1:]
+        for j, sentence in enumerate(source):
+            role = roles[sentence["role"]]
+            assert role == convroles[j % 2], f"{i}"
+            messages.append(
+                {"role": role, "content": sentence["content"]}
+            )
+        conversation = tokenizer.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=False,
+        )
+
+        if not tokenizer.pad_token_id:
+            tokenizer.pad_token_id = tokenizer.unk_token_id
+
+        input_ids = tokenizer(
+            conversation,
+            return_tensors="pt",
+            add_special_tokens=False,
+        ).input_ids[0]
+        # When construct draft model vocab, 
+        # filter out samples which is longer than max_len,
+        # instead of truncating them.
+
+        if len(input_ids) > train_config['max_len']:
+            continue
+        loss_mask = torch.ones_like(input_ids)
+        # print(i)
+
+        sep = "<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+
+        total_len = len(input_ids)
+
+        sep2 = "<|eot_id|><|start_header_id|>user<|end_header_id|>"
+        turns = conversation.split(sep2)
+
+        turns[1] = turns[0] + sep2 + turns[1]
+        turns = turns[1:]
+
+        cur_len = 1
+        loss_mask[:cur_len] = 0
+        for i, turn in enumerate(turns):
+            if turn == "":
+                break
+            turn_len = len(tokenizer(turn).input_ids)
+
+            parts = turn.split(sep)
+            if len(parts) != 2:
+                break
+            parts[0] += sep
+            # "-2" is hardcoded for the Llama tokenizer to make the offset correct.
+            instruction_len = len(tokenizer(parts[0]).input_ids) - 1
+
+            # Ignore the user instructions
+            if i == 0:
+                loss_mask[cur_len: cur_len + instruction_len - 2] = 0
+            else:
+                loss_mask[cur_len - 3: cur_len + instruction_len + 1] = 0
+            cur_len += turn_len
+            if i != 0:
+                cur_len += 3
+            # cur_len+=2
+
+            # if i != 0 and not tokenizer.legacy:
+            #     # The legacy and non-legacy modes handle special tokens differently
+            #     cur_len -= 1
+
+        loss_mask[cur_len:] = 0
+
+        # new_examples["conversation"].append(conversation)
+        new_examples["input_ids"].append(input_ids[None, :])
+        new_examples["loss_mask"].append(loss_mask[None, :])
+
+    return new_examples
+
 # Copied from transformers.models.bart.modeling_bart._make_causal_mask
 def _make_causal_mask(
         input_ids_shape: torch.Size, dtype: torch.dtype, device: torch.device, past_key_values_length: int = 0
@@ -547,111 +641,15 @@ class Model(nn.Module):
             original_columns1 = dataset.column_names
             num_proc = 1
 
-
-            def preprocess_function(examples):
-                new_examples = {
-                    # "conversation": [],
-                    "input_ids": [],
-                    "loss_mask": []
-                }
-                for i in range(len(examples['id'])):
-                    messages = [
-                        {"role": "system",
-                         "content": "You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe.  Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.\n\nIf a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information."},
-                    ]
-                    convroles = ["user", "assistant"]
-                    roles = {"user": "user", "assistant": "assistant"}
-                    source = examples['conversations'][i]
-                    if not source:
-                        continue
-                    if roles[source[0]["role"]] != "user":
-                        # Skip the first one if it is not from human
-                        source = source[1:]
-                    for j, sentence in enumerate(source):
-                        role = roles[sentence["role"]]
-                        assert role == convroles[j % 2], f"{i}"
-                        messages.append(
-                            {"role": role, "content": sentence["content"]}
-                        )
-                    conversation = tokenizer.apply_chat_template(
-                        messages,
-                        tokenize=False,
-                        add_generation_prompt=False,
-                    )
-
-                    if not tokenizer.pad_token_id:
-                        tokenizer.pad_token_id = tokenizer.unk_token_id
-
-                    input_ids = tokenizer(
-                        conversation,
-                        return_tensors="pt",
-                        add_special_tokens=False,
-                    ).input_ids[0]
-                    # When construct draft model vocab, 
-                    # filter out samples which is longer than max_len,
-                    # instead of truncating them.
-
-                    if len(input_ids) > self.train_config['max_len']:
-                        continue
-                    loss_mask = torch.ones_like(input_ids)
-                    # print(i)
-
-                    sep = "<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
-
-                    total_len = len(input_ids)
-
-                    sep2 = "<|eot_id|><|start_header_id|>user<|end_header_id|>"
-                    turns = conversation.split(sep2)
-
-                    turns[1] = turns[0] + sep2 + turns[1]
-                    turns = turns[1:]
-
-                    cur_len = 1
-                    loss_mask[:cur_len] = 0
-                    for i, turn in enumerate(turns):
-                        if turn == "":
-                            break
-                        turn_len = len(tokenizer(turn).input_ids)
-
-                        parts = turn.split(sep)
-                        if len(parts) != 2:
-                            break
-                        parts[0] += sep
-                        # "-2" is hardcoded for the Llama tokenizer to make the offset correct.
-                        instruction_len = len(tokenizer(parts[0]).input_ids) - 1
-
-                        # Ignore the user instructions
-                        if i == 0:
-                            loss_mask[cur_len: cur_len + instruction_len - 2] = 0
-                        else:
-                            loss_mask[cur_len - 3: cur_len + instruction_len + 1] = 0
-                        cur_len += turn_len
-                        if i != 0:
-                            cur_len += 3
-                        # cur_len+=2
-
-                        # if i != 0 and not tokenizer.legacy:
-                        #     # The legacy and non-legacy modes handle special tokens differently
-                        #     cur_len -= 1
-
-                    loss_mask[cur_len:] = 0
-
-                    # new_examples["conversation"].append(conversation)
-                    new_examples["input_ids"].append(input_ids[None, :])
-                    new_examples["loss_mask"].append(loss_mask[None, :])
-
-                return new_examples
-
+            from functools import partial
             dataset = dataset.map(
-                preprocess_function,
+                partial(aaa, tokenizer, self.train_config),
                 batched=True,
                 num_proc=num_proc,
                 remove_columns=original_columns1,
                 load_from_cache_file=False
             )
             #dataset.set_format(type="torch")
-
-
 
             num_processes = num_proc
             chunk_size = len(dataset) // num_processes + (len(dataset) % num_processes > 0)
@@ -681,11 +679,12 @@ class Model(nn.Module):
                 "d2t": d2t,
                 "t2d": t2d
             }
-            torch.save(cache, "cache.pt")
+            ########### torch.save(cache, "cache.pt")
         else:
             cache = torch.load("cache.pt")
             d2t = cache["d2t"]
             t2d = cache["t2d"]
+            import rpdb; rpdb.set_trace()
         self.register_buffer("d2t", d2t)
         self.register_buffer("t2d", t2d)
         self.l1smooth = nn.SmoothL1Loss(reduction="none")
