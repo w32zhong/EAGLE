@@ -18,6 +18,11 @@ model = EaModel.from_pretrained(
 model.eval()
 model.ea_layer.tokenizer = model.tokenizer
 
+sys.path.insert(0, '../../')
+from specforge_het.timer import TimeStats
+model.timer = TimeStats(disable=False)
+model.ea_layer.timer = model.timer
+
 sys_p = "You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe.  Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.\n\nIf a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information."
 question = "Thomas is very healthy, but he has to go to the hospital every day. What could be the reasons?"
 conv = get_conversation_template("llama-2-chat")  
@@ -44,6 +49,9 @@ for output_ids in model.ea_generate(input_ids):
 print()
 
 time_delta = time.time() - start_time
+
+print(model.timer.report())
+
 print('e2e speed:', sum(accept_length) / time_delta)
 print('max accept_length:', max(accept_length))
 print('min accept_length:', min(accept_length))

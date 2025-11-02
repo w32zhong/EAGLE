@@ -439,8 +439,8 @@ class EaModel(nn.Module):
 
             if hasattr(self, 'timer'): self.timer.start('verify')
             draft_tokens=draft_tokens.to(input_ids.device)
-            if hasattr(self, 'timer'): 
-                self.timer._hist['verify length'].append(draft_tokens.shape[1])
+            #if hasattr(self, 'timer'): 
+            #    self.timer._hist['verify length'].append(draft_tokens.shape[1])
             #with Timer("tree_decoding"):
             logits, hidden_state_new, outputs = tree_decoding(
                 self,
@@ -462,14 +462,15 @@ class EaModel(nn.Module):
             )
             if hasattr(self, 'timer'): self.timer.stop('iteration misc')
 
-            if hasattr(self, 'timer'): self.timer._hist['bonus tokens'].append(accept_length.item())
-            if hasattr(self, 'timer') and not self.timer.disable:
-                n_new_tokens = accept_length.item() + 1
-                for i in range(n_new_tokens):
-                    if i == n_new_tokens - 1:
-                        self.timer._hist[f'alpha{i}'].append(0)
-                    else:
-                        self.timer._hist[f'alpha{i}'].append(1)
+            #if hasattr(self, 'timer'): self.timer._hist['bonus tokens'].append(accept_length.item())
+            #if hasattr(self, 'timer') and not self.timer.disable:
+            #    n_new_tokens = accept_length.item() + 1
+            #    for i in range(n_new_tokens):
+            #        if i == n_new_tokens - 1:
+            #            self.timer._hist[f'alpha{i}'].append(0)
+            #        else:
+            #            self.timer._hist[f'alpha{i}'].append(1)
+
             # print(accept_length)
             #with Timer("update_inference_inputs"):
             if hasattr(self, 'timer'): self.timer.start('draft')

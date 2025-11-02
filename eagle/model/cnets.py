@@ -735,7 +735,9 @@ class Model(nn.Module):
             last_headout = head(out_hidden[0]) # [10, 32000]
             last_p = self.logsoftmax(last_headout) # [10, 32000]
 
+            if hasattr(self, 'timer'): self.timer.start('draft topk')
             top = torch.topk(last_p, top_k, dim=-1)
+            if hasattr(self, 'timer'): self.timer.stop('draft topk')
             topk_index, topk_p = top.indices, top.values
             # topk_index: [10, 10]
             # topk_p: [10, 10]
@@ -743,7 +745,10 @@ class Model(nn.Module):
 
             cu_scores = topk_p + scores[:, None] # [10, 10] + [10] = [10, 10]
 
+            if hasattr(self, 'timer'): self.timer.start('draft topk beam')
             topk_cs = torch.topk(cu_scores.view(-1), top_k, dim=-1)
+            if hasattr(self, 'timer'): self.timer.stop('draft topk beam')
+
             topk_cs_index, topk_cs_p = topk_cs.indices, topk_cs.values # [10], [10]
             # topk_cs_index example:
             # [10,  0, 20, 30, 50, 40,  1, 70, 60, 31]
