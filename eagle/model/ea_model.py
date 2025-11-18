@@ -10,10 +10,10 @@ import os
 from transformers import PreTrainedModel, PretrainedConfig, AutoConfig
 
 from .modeling_llama_kv import LlamaForCausalLM as KVLlamaForCausalLM
-from .modeling_mixtral_kv import MixtralForCausalLM as KVMixtralForCausalLM
+#from .modeling_mixtral_kv import MixtralForCausalLM as KVMixtralForCausalLM
 #from .modeling_qwen2_kv import LlamaForCausalLM as KVQwen2ForCausalLM
-from .modeling_qwen2_kv import Qwen2ForCausalLM as KVQwen2ForCausalLM
-from .modeling_qwen3_kv import Qwen3ForCausalLM as KVQwen3ForCausalLM
+#from .modeling_qwen2_kv import Qwen2ForCausalLM as KVQwen2ForCausalLM
+#from .modeling_qwen3_kv import Qwen3ForCausalLM as KVQwen3ForCausalLM
 from .utils import *
 from .kv_cache import initialize_past_key_values
 
@@ -33,7 +33,8 @@ class EaModel(nn.Module):
             total_token,
             depth,
             top_k,
-            threshold,
+            pondering_threshold,
+            pondering_options,
             ea_layer_state_dict,
     ):
 
@@ -54,10 +55,11 @@ class EaModel(nn.Module):
             bias = True
         if use_eagle3:
             self.ea_layer = Model(config, bias=bias, total_tokens=total_token, depth=depth, top_k=top_k,
-                                  threshold=threshold, path=base_model_name_or_path,load_emb=True)
+                                  pondering_threshold=pondering_threshold, pondering_options=pondering_options,
+                                  path=base_model_name_or_path,load_emb=True)
         else:
             self.ea_layer = Model1(config, bias=bias, total_tokens=total_token, depth=depth, top_k=top_k,
-                                  threshold=threshold, path=base_model_name_or_path,load_emb=True)
+                                  path=base_model_name_or_path,load_emb=True)
 
         low_memory = False
 
@@ -94,7 +96,8 @@ class EaModel(nn.Module):
             total_token=60,
             depth=7,
             top_k=10,
-            threshold=1.0,
+            pondering_threshold=1.0,
+            pondering_options='disabled',
             **kwargs,
     ):
         # assert Type=="LLaMA" or "Mixtral"
@@ -141,7 +144,8 @@ class EaModel(nn.Module):
             total_token,
             depth,
             top_k,
-            threshold,
+            pondering_threshold,
+            pondering_options,
             ea_layer_state_dict
         )
 

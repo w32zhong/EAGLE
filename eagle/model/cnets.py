@@ -22,6 +22,7 @@ import copy
 import os
 # os.environ["CUDA_VISIBLE_DEVICES"] = "5"
 import math
+import random
 from typing import List, Optional, Tuple, Union
 import torch.nn.functional as F
 import torch.utils.checkpoint
@@ -476,12 +477,15 @@ def len_list(x, n):
 
 
 class Model(nn.Module):
-    def __init__(self, config, load_emb=False, path=None, bias=True, total_tokens=63, depth=5, top_k=8, threshold=1.0):
+    def __init__(self, config, load_emb=False, path=None, bias=True, total_tokens=63, depth=5, top_k=8,
+                 pondering_threshold=1.0, pondering_options=None):
         super().__init__()
         self.config=config
         self.gradient_checkpointing = True
         self.padding_idx = config.pad_token_id
         self.vocab_size = config.vocab_size
+        self.pondering_threshold = pondering_threshold
+        self.pondering_options = pondering_options
 
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
         self.lm_head=nn.Linear(config.hidden_size,config.draft_vocab_size,bias=False)
@@ -521,11 +525,9 @@ class Model(nn.Module):
         self.top_k = top_k
         self.total_tokens = total_tokens - 1
         self.depth = depth
-        self.threshold = math.log(threshold)
         # print("total_tokens",total_tokens)
         # print("depth",depth)
         # print("top_k",top_k)
-        # print("threshold",threshold)
         self.hidden_size = config.hidden_size
         self.midlayer = LlamaDecoderLayeremb(config)
         if hasattr(config, "target_hidden_size"):
@@ -534,6 +536,9 @@ class Model(nn.Module):
             self.fc = nn.Linear(config.hidden_size * 3, self.hidden_size, bias=False)
         self.norm=LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.logsoftmax = nn.LogSoftmax(dim=-1)
+
+        self.gate_linear = nn.Linear(config.hidden_size, 1)
+        self.gate = nn.Sigmoid()
 
         d2t=torch.zeros((config.draft_vocab_size),dtype=torch.long)
         t2d=torch.zeros((config.vocab_size),dtype=torch.bool)
@@ -756,6 +761,21 @@ class Model(nn.Module):
             scores_list.append(cu_scores)
             tree_mask = torch.cat((tree_mask[:, :, out_ids], self.tree_mask_init), dim=3)
 
+            assert self.pondering_options in ['enabled', 'disabled', 'random']
+            if not self.pondering_options == 'disabled':
+                if self.pondering_options == 'random':
+                    exit_i = random.uniform(0, 1)
+                else:
+                    ev = self.gate(self.gate_linear(out_hidden[0]))
+                    if top_k == 1:
+                        exit_i = ev.item()
+                    else:
+                        exit_i = 1 - torch.prod(1 - ev).item()
+                if exit_i > self.pondering_threshold:
+                    total_early_tokens = top_k + top_k ** 2 * (i + 1)
+                    #assert total_early_tokens == sum(x.numel() for x in ss_token)
+                    total_tokens = min(total_early_tokens, total_tokens)
+                    break
 
         scores_list = torch.cat(scores_list, dim=0).view(-1)
         ss_token_list = torch.cat(ss_token, dim=0).view(-1)

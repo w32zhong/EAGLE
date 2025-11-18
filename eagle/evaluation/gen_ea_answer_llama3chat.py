@@ -108,6 +108,9 @@ def get_model_answers(
         total_token=args.total_token,
         depth=args.depth,
         top_k=args.top_k,
+        pondering_threshold=args.pondering_threshold,
+        pondering_options=args.pondering_options,
+        # extra kwargs:
         torch_dtype=torch.float16,
         low_cpu_mem_usage=True,
         # load_in_8bit=True,
@@ -407,6 +410,17 @@ if __name__ == "__main__":
     parser.add_argument(
         "--use_eagle3",
         action="store_true"
+    )
+
+    parser.add_argument(
+        "--pondering_threshold",
+        type=float,
+        default=0.8,
+    )
+    parser.add_argument(
+        "--pondering_options",
+        type=str,
+        default="disabled",
     )
 
     args = parser.parse_args()
