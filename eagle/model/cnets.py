@@ -41,6 +41,7 @@ except:
     from utils_c import *
     from choices import *
     from utils import prepare_logits_processor
+from .timestats import TimeStats
 
 
 
@@ -486,6 +487,7 @@ class Model(nn.Module):
         self.vocab_size = config.vocab_size
         self.pondering_threshold = pondering_threshold
         self.pondering_options = pondering_options
+        self.pondering_stats = TimeStats(disable=False)
 
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
         self.lm_head=nn.Linear(config.hidden_size,config.draft_vocab_size,bias=False)
@@ -671,6 +673,26 @@ class Model(nn.Module):
     def reset_kv(self):
         self.stable_kv = None
 
+    def early_exit(self, hidden, i):
+        #assert self.pondering_options in ['enabled', 'disabled', 'random', 'stats']
+        if not self.pondering_options == 'disabled':
+            if self.pondering_options == 'random':
+                exit_i = random.uniform(0, 1)
+            else:
+                ev = self.gate(self.gate_linear(hidden))
+                if self.top_k == 1:
+                    exit_i = ev.item()
+                else:
+                    exit_i = 1 - torch.prod(1 - ev).item()
+            if self.pondering_options == 'stats':
+                self.pondering_stats._hist[f'e{i}'].append(exit_i)
+            elif exit_i > self.pondering_threshold:
+                total_early_tokens = self.top_k + self.top_k ** 2 * i
+                #assert total_early_tokens == sum(x.numel() for x in ss_token)
+                total_tokens = min(total_early_tokens, total_tokens)
+                return total_tokens
+        return False
+
     @torch.no_grad()
     def topK_genrate(self, hidden_states, input_ids, head, logits_processor):
 
@@ -720,6 +742,10 @@ class Model(nn.Module):
         tree_mask = self.tree_mask_init
         topk_cs_index = torch.arange(top_k, device=self.embed_tokens.weight.device)
 
+        if update_total_tokens := self.early_exit(last_hidden, 0):
+            total_tokens = update_total_tokens
+            depth = 0
+
         # 4
         for i in range(depth):
             self.tree_mask = tree_mask
@@ -761,21 +787,9 @@ class Model(nn.Module):
             scores_list.append(cu_scores)
             tree_mask = torch.cat((tree_mask[:, :, out_ids], self.tree_mask_init), dim=3)
 
-            assert self.pondering_options in ['enabled', 'disabled', 'random']
-            if not self.pondering_options == 'disabled':
-                if self.pondering_options == 'random':
-                    exit_i = random.uniform(0, 1)
-                else:
-                    ev = self.gate(self.gate_linear(out_hidden[0]))
-                    if top_k == 1:
-                        exit_i = ev.item()
-                    else:
-                        exit_i = 1 - torch.prod(1 - ev).item()
-                if exit_i > self.pondering_threshold:
-                    total_early_tokens = top_k + top_k ** 2 * (i + 1)
-                    #assert total_early_tokens == sum(x.numel() for x in ss_token)
-                    total_tokens = min(total_early_tokens, total_tokens)
-                    break
+            if update_total_tokens := self.early_exit(out_hidden[0], i + 1):
+                total_tokens = update_total_tokens
+                break
 
         scores_list = torch.cat(scores_list, dim=0).view(-1)
         ss_token_list = torch.cat(ss_token, dim=0).view(-1)
