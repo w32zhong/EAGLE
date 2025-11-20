@@ -27,8 +27,8 @@ for model_and_train_ttt in \
   "w32zhong/neat-hill-232__pondering_ttt8,8" \
   "w32zhong/toasty-durian-227__tau3,5" \
   ; do
-  for tree in 5,1,6  8,1,9  10,1,11  12,1,13  15,1,16  20,1,21  \
-              5,5,10  8,5,20  10,5,25  12,5,25  15,5,35  20,5,60; do
+  for tree in 5,1,7   8,1,10  10,1,12  12,1,14  15,1,17  20,1,22  \
+              5,5,25  8,5,40  10,5,50  12,5,60  15,5,75  20,5,100; do
     for pondering_threshold in 0.8; do
       for pondering_options in random disabled greedy joint; do
         IFS=',' read -r model train_ttt <<< $model_and_train_ttt
