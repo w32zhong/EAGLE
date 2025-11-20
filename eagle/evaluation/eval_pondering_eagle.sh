@@ -30,7 +30,7 @@ for model_and_train_ttt in \
   for tree in 5,1,6  8,1,9  10,1,11  12,1,13  15,1,16  20,1,21  \
               5,5,10  8,5,20  10,5,25  12,5,25  15,5,35  20,5,60; do
     for pondering_threshold in 0.8; do
-      for pondering_options in random disabled enabled; do
+      for pondering_options in random disabled greedy joint; do
         IFS=',' read -r model train_ttt <<< $model_and_train_ttt
         IFS=',' read -r depth top_k total_k <<< $tree
         if [ $depth -lt $train_ttt ]; then continue; fi

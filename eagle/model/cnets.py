@@ -674,23 +674,34 @@ class Model(nn.Module):
         self.stable_kv = None
 
     def early_exit(self, hidden, i):
-        #assert self.pondering_options in ['enabled', 'disabled', 'random', 'stats']
+        #assert self.pondering_options in ['disabled', 'joint', 'greedy', 'random', 'stats']
         if not self.pondering_options == 'disabled':
-            if self.pondering_options == 'random':
-                exit_i = random.uniform(0, 1)
-            else:
-                ev = self.gate(self.gate_linear(hidden))
-                if self.top_k == 1:
-                    exit_i = ev.item()
-                else:
-                    exit_i = 1 - torch.prod(1 - ev).item()
-            if self.pondering_options == 'stats':
+            ev = self.gate(self.gate_linear(hidden))
+            exit_i = ev.item() if self.top_k == 1 else (1 - torch.prod(1 - ev).item())
+
+            if self.pondering_options == 'joint':
+                if i == 0: self.survive = 1.0
+                self.survive *= (1 - exit_i)
+                exit_condition = (self.survive < 1 - self.pondering_threshold)
+
+            elif self.pondering_options == 'greedy':
+                exit_condition = (exit_i > self.pondering_threshold)
+
+            elif self.pondering_options == 'random':
+                exit_condition = (random.uniform(0, 1) > self.pondering_threshold)
+
+            elif self.pondering_options == 'stats':
                 self.pondering_stats._hist[f'e{i}'].append(exit_i)
-            elif exit_i > self.pondering_threshold:
+                exit_condition = False
+
+            else:
+                raise NotImplementedError
+
+            if exit_condition:
                 total_early_tokens = self.top_k + self.top_k ** 2 * i
                 #assert total_early_tokens == sum(x.numel() for x in ss_token)
-                total_tokens = min(total_early_tokens, total_tokens)
-                return total_tokens
+                return total_early_tokens
+
         return False
 
     @torch.no_grad()
@@ -742,8 +753,8 @@ class Model(nn.Module):
         tree_mask = self.tree_mask_init
         topk_cs_index = torch.arange(top_k, device=self.embed_tokens.weight.device)
 
-        if update_total_tokens := self.early_exit(last_hidden, 0):
-            total_tokens = update_total_tokens
+        if total_early_tokens := self.early_exit(last_hidden, 0):
+            total_tokens = min(total_tokens, total_early_tokens)
             depth = 0
 
         # 4
@@ -787,8 +798,8 @@ class Model(nn.Module):
             scores_list.append(cu_scores)
             tree_mask = torch.cat((tree_mask[:, :, out_ids], self.tree_mask_init), dim=3)
 
-            if update_total_tokens := self.early_exit(out_hidden[0], i + 1):
-                total_tokens = update_total_tokens
+            if total_early_tokens := self.early_exit(out_hidden[0], i + 1):
+                total_tokens = min(total_tokens, total_early_tokens)
                 break
 
         scores_list = torch.cat(scores_list, dim=0).view(-1)
