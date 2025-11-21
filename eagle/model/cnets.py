@@ -674,23 +674,35 @@ class Model(nn.Module):
         self.stable_kv = None
 
     def early_exit(self, hidden, i):
-        #assert self.pondering_options in ['disabled', 'joint', 'greedy', 'random', 'stats']
+        # Valid options: ['disabled', 'joint_*', 'greedy_*', 'random', 'stats_*']
+        # where * is in ['max', 'min', 'avg', *]
+        def aggregate_children(ev, mode):
+            if mode == 'max':
+                return ev.max().item()
+            elif mode == 'min':
+                return ev.min().item()
+            elif mode == 'avg':
+                return ev.mean().item()
+            else:
+                return 1 - torch.prod(1 - ev).item()
+
         if not self.pondering_options == 'disabled':
             ev = self.gate(self.gate_linear(hidden))
-            exit_i = ev.item() if self.top_k == 1 else (1 - torch.prod(1 - ev).item())
+            aggregate_mode = self.pondering_options[-3:]
+            exit_i = ev.item() if self.top_k == 1 else aggregate_children(ev, aggregate_mode)
 
-            if self.pondering_options == 'joint':
+            if self.pondering_options.startswith('joint'):
                 if i == 0: self.survive = 1.0
                 self.survive *= (1 - exit_i)
                 exit_condition = (self.survive < 1 - self.pondering_threshold)
 
-            elif self.pondering_options == 'greedy':
+            elif self.pondering_options.startswith('greedy'):
                 exit_condition = (exit_i > self.pondering_threshold)
 
-            elif self.pondering_options == 'random':
+            elif self.pondering_options.startswith('random'):
                 exit_condition = (random.uniform(0, 1) > self.pondering_threshold)
 
-            elif self.pondering_options == 'stats':
+            elif self.pondering_options.startswith('stats'):
                 self.pondering_stats._hist[f'e{i}'].append(exit_i)
                 exit_condition = False
 
