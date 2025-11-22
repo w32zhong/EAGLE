@@ -28,17 +28,22 @@ for model_and_train_ttt in \
   "w32zhong/toasty-durian-227__tau3,5" \
   "w32zhong/decent-cherry-234__baseline_ttt12" \
   "w32zhong/jolly-elevator__pondering_baseline_ep1step120k" \
+  "w32zhong/vital-energy__annealing5_ep3_step_890K" \
   ; do
   for tree in 5,1,7   8,1,10  10,1,12  12,1,14  15,1,17  20,1,22  \
-              5,5,25  8,5,40  10,5,50  12,5,60  15,5,75  20,5,100; do
+              5,5,25  8,5,40  10,5,50  12,5,60  15,5,75  20,5,100 \
+              5,10,50  8,10,80  10,10,90  12,10,100 \
+    ; do
     IFS=',' read -r model train_ttt <<< $model_and_train_ttt
     IFS=',' read -r depth top_k total_k <<< $tree
     if [[ "$model" =~ "baseline" ]]; then
       options="disabled"
     elif [ $top_k -eq 1 ]; then
-      options="disabled random joint greedy"
+      #options="disabled random joint greedy"
+      options="disabled greedy"
     else
-      options="disabled random greedy_max greedy_min greedy_avg"
+      #options="disabled random greedy_max greedy_min greedy_avg"
+      options="disabled greedy_min greedy_avg"
     fi
     for pondering_threshold in 0.8; do
       for pondering_options in $options; do
