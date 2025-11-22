@@ -39,7 +39,7 @@ for model_and_train_ttt in \
     for pondering_threshold in 0.8; do
       for pondering_options in disabled random $extra_options; do
         # (optional) skip extrapolation
-        if [ $depth -gt $train_ttt ]; then continue; fi
+        #if [ $depth -gt $train_ttt ]; then continue; fi
 
         # any existing log? if yes, evaluate the speeds and skip.
         session=$(experiment_sanitize "${model}_${tree}_${pondering_threshold}_${pondering_options}")
