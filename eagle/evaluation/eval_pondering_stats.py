@@ -91,7 +91,7 @@ def optimal(json_file='pondering_stats.json', use_linear_C=True):
     plt.savefig(f'{json_file}_optimal_linear{use_linear_C}.png')
 
 
-def costs(json_file='pondering_stats.json', T0=18.74, Ti=1.16):
+def costs(json_file='pondering_stats.json'):
     with open(json_file) as fh:
         j = json.load(fh)
     max_exit_i = max(j['exit@'])
@@ -107,11 +107,18 @@ def costs(json_file='pondering_stats.json', T0=18.74, Ti=1.16):
     x = np.arange(len(C_mean))
     y = np.array(C_mean)
     a, b = np.polyfit(x, y, 1) # degree 1 → linear
+    interpolated = [(a * x + b).item() for x in range(len(C_mean))]
 
     print(C_mean)
     print(C_std)
     print(a, b)
-    print([(a * x + b).item() for x in range(len(C_mean))])
+    print(interpolated)
+
+    fig, ax = plt.subplots(1, 1, figsize=(8, 6))
+    ax.scatter(x, y, color='red')
+    ax.plot(x, interpolated)
+    plt.tight_layout()
+    plt.savefig(f'{json_file}_costs.png')
 
 
 if __name__ == '__main__':
