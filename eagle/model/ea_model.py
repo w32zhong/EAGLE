@@ -253,6 +253,9 @@ class EaModel(nn.Module):
         new_token = 0
         max_length = max_length - self.ea_layer.total_tokens - 10
         for idx in range(max_length):
+            if self.ea_layer.pondering_options == 'stats_cost':
+                self.ea_layer.pondering_stats.start('C')
+
             # with Timer("all"):
             self.base_model.model.tree_mask = tree_mask
 
@@ -292,6 +295,9 @@ class EaModel(nn.Module):
                 hidden_state_new,
                 sample_p
             )
+
+            if self.ea_layer.pondering_options == 'stats_cost':
+                self.ea_layer.pondering_stats.stop('C')
 
             if is_llama3:
                 if stop_token_id in input_ids[0, input_len:].tolist():

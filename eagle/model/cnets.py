@@ -686,35 +686,45 @@ class Model(nn.Module):
             else:
                 return 1 - torch.prod(1 - ev).item()
 
-        if not self.pondering_options == 'disabled':
+        if self.pondering_options == 'disabled':
+            return False
+
+        if i == self.depth:
+            exit_i = 1.0
+        else:
             ev = self.gate(self.gate_linear(hidden))
             aggregate_mode = self.pondering_options[-3:]
             exit_i = ev.item() if self.top_k == 1 else aggregate_children(ev, aggregate_mode)
 
-            if self.pondering_options.startswith('joint'):
-                if i == 0: self.survive = 1.0
-                self.survive *= (1 - exit_i)
-                exit_condition = (self.survive < 1 - self.pondering_threshold)
+        if self.pondering_options.startswith('joint'):
+            if i == 0: self.survive = 1.0
+            self.survive *= (1 - exit_i)
+            exit_condition = (self.survive < 1 - self.pondering_threshold)
 
-            elif self.pondering_options.startswith('greedy'):
-                exit_condition = (exit_i > self.pondering_threshold)
+        elif self.pondering_options.startswith('greedy'):
+            exit_condition = (exit_i > self.pondering_threshold)
 
-            elif self.pondering_options.startswith('random'):
-                exit_condition = (random.uniform(0, 1) > self.pondering_threshold)
+        elif self.pondering_options.startswith('random'):
+            exit_condition = (random.uniform(0, 1) > self.pondering_threshold)
 
-            elif self.pondering_options.startswith('stats'):
-                self.pondering_stats._hist[f'e{i}'].append(exit_i)
-                exit_condition = False
-
-            else:
-                raise NotImplementedError
-
+        elif self.pondering_options == 'stats_cost':
+            exit_condition = (random.uniform(0, 1) > self.pondering_threshold) or (i == self.depth)
             if exit_condition:
-                total_early_tokens = self.top_k + self.top_k ** 2 * i
-                #assert total_early_tokens == sum(x.numel() for x in ss_token)
-                return total_early_tokens
+                self.pondering_stats._hist[f'exit@'].append(i)
 
-        return False
+        elif self.pondering_options == 'stats':
+            self.pondering_stats._hist[f'e{i}'].append(exit_i)
+            exit_condition = False
+
+        else:
+            raise NotImplementedError
+
+        if exit_condition:
+            total_early_tokens = self.top_k + self.top_k ** 2 * i
+            #assert total_early_tokens == sum(x.numel() for x in ss_token)
+            return total_early_tokens
+        else:
+            return False
 
     @torch.no_grad()
     def topK_genrate(self, hidden_states, input_ids, head, logits_processor):
