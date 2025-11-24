@@ -104,8 +104,14 @@ def costs(json_file='pondering_stats.json', T0=18.74, Ti=1.16):
     C_mean = [h.mean().item() for h in C_hist]
     C_std = [h.std().item() for h in C_hist]
 
+    x = np.arange(len(C_mean))
+    y = np.array(C_mean)
+    a, b = np.polyfit(x, y, 1) # degree 1 → linear
+
     print(C_mean)
     print(C_std)
+    print(a, b)
+    print([(a * x + b).item() for x in range(len(C_mean))])
 
 
 if __name__ == '__main__':
