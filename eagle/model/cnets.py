@@ -539,7 +539,11 @@ class Model(nn.Module):
         self.norm=LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.logsoftmax = nn.LogSoftmax(dim=-1)
 
-        self.gate_linear = nn.Linear(config.hidden_size, 1)
+        if '1' in pondering_options:
+            self.gate_linear1 = nn.Linear(config.hidden_size, 1)
+            self.gate_linear2 = nn.Linear(config.hidden_size, 1)
+        else:
+            self.gate_linear = nn.Linear(config.hidden_size, 1)
         self.gate = nn.Sigmoid()
 
         d2t=torch.zeros((config.draft_vocab_size),dtype=torch.long)
@@ -645,7 +649,7 @@ class Model(nn.Module):
         inputs_embeds = inputs_embeds.to(hidden_states.dtype)
         if hidden_states.shape[-1]!=inputs_embeds.shape[-1]:
             hidden_states = self.fc(hidden_states)
-        # hidden_states = self.fc(hidden_states)
+        save_last_target_states = hidden_states[:, -1]
 
         all_hidden_states = () if output_hidden_states else None
         next_decoder_cache = () if use_cache else None
@@ -666,15 +670,15 @@ class Model(nn.Module):
 
 
         if use_cache:
-            return hidden_states, next_decoder_cache
+            return hidden_states, next_decoder_cache, save_last_target_states
 
-        return hidden_states
+        return hidden_states, save_last_target_states
 
     def reset_kv(self):
         self.stable_kv = None
 
     def early_exit(self, hidden, i):
-        # Valid options: ['disabled', 'joint_*', 'greedy_*', 'random', 'stats_*']
+        # Valid options: ['disabled', 'joint[1]_*', 'greedy[1]_*', 'random', 'stats_*']
         # where * is in ['max', 'min', 'avg', *]
         def aggregate_children(ev, mode):
             if mode == 'max':
@@ -692,7 +696,14 @@ class Model(nn.Module):
         if i == self.depth:
             exit_i = 1.0
         else:
-            ev = self.gate(self.gate_linear(hidden))
+            if '1' in self.pondering_options:
+                if i == -1:
+                    ev = self.gate(self.gate_linear1(hidden))
+                else:
+                    ev = self.gate(self.gate_linear2(hidden))
+            else:
+                ev = self.gate(self.gate_linear(hidden))
+
             aggregate_mode = self.pondering_options[-3:]
             exit_i = ev.item() if self.top_k == 1 else aggregate_children(ev, aggregate_mode)
 
@@ -720,7 +731,7 @@ class Model(nn.Module):
             raise NotImplementedError
 
         if exit_condition:
-            total_early_tokens = self.top_k + self.top_k ** 2 * i
+            total_early_tokens = self.top_k + self.top_k ** 2 * i if i >= 0 else True
             #assert total_early_tokens == sum(x.numel() for x in ss_token)
             return total_early_tokens
         else:
@@ -749,12 +760,20 @@ class Model(nn.Module):
         # with Timer("draft many"):
         if hasattr(self, "stable_kv") and self.stable_kv is not None:
             kv_len = self.stable_kv[0][0].shape[2]
-            out_hidden, past_key_values = self(hidden_states, input_ids=input_ids[:, kv_len:],
+            out_hidden, past_key_values, s = self(hidden_states, input_ids=input_ids[:, kv_len:],
                                                past_key_values=self.stable_kv, use_cache=True)
         else:
-            out_hidden, past_key_values = self(hidden_states, input_ids=input_ids, use_cache=True)
+            out_hidden, past_key_values, s = self(hidden_states, input_ids=input_ids, use_cache=True)
         self.stable_kv = past_key_values
         last_hidden = out_hidden[:, -1]
+
+        #if True:
+        if _ := self.early_exit(s, -1):
+            draft_tokens = sample_token[None]
+            retrieve_indices = torch.zeros(1, 1, dtype=torch.long)
+            tree_mask = torch.eye(1)[None, None]
+            tree_position_ids = torch.zeros(1, dtype=torch.long, device=draft_tokens.device)
+            return draft_tokens, retrieve_indices, tree_mask, tree_position_ids
 
         # last_headout = head(last_hidden)
         last_headout = self.lm_head(self.norm(last_hidden))
@@ -784,8 +803,10 @@ class Model(nn.Module):
             self.tree_mask = tree_mask
             position_ids = len_posi + self.position_ids
             # with Timer("draft one"):
-            out_hidden, past_key_values = self(input_hidden, input_ids=input_ids, past_key_values=past_key_values,
-                                               position_ids=position_ids, use_cache=True)
+            out_hidden, past_key_values, _ = self(
+                input_hidden, input_ids=input_ids, past_key_values=past_key_values,
+                position_ids=position_ids, use_cache=True
+            )
             len_posi += 1
 
             # with Timer("sort1"):

@@ -75,7 +75,14 @@ class EaModel(nn.Module):
             self.ea_layer.diff_device = False
         if self.use_eagle3 and config.vocab_size==config.draft_vocab_size:
             del self.ea_layer.d2t,self.ea_layer.t2d
+
+        try:
+            self.ea_layer.load_state_dict(ea_layer_state_dict, strict=True)
+        except Exception as e:
+            print('\33[33m', e, '\033[0m')
+
         load_=self.ea_layer.load_state_dict(ea_layer_state_dict, strict=False)
+
         self.ea_layer.to(self.base_model.dtype).to(device)
         self.ea_layer.init_tree()
 
@@ -279,7 +286,6 @@ class EaModel(nn.Module):
             )
             if self.ea_layer.pondering_options == 'stats':
                 self.ea_layer.pondering_stats._hist[f'a'].append(accept_length.item())
-            # print(accept_length)
             # Adjusting the input sequence, draft model forward
             input_ids, draft_tokens, retrieve_indices, tree_mask, tree_position_ids, new_token, hidden_state, sample_token = update_inference_inputs(
                 input_ids,
@@ -302,6 +308,8 @@ class EaModel(nn.Module):
             if is_llama3:
                 if stop_token_id in input_ids[0, input_len:].tolist():
                     break
+
+            #print(accept_length.item(), self.tokenizer.decode(input_ids[0, -accept_length-1:]), end=" ")
 
             if self.tokenizer.eos_token_id in input_ids[0, input_len:].tolist():
                 break
