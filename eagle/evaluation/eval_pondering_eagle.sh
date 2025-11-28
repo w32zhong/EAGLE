@@ -22,13 +22,10 @@ run() {
 }
 
 for model_and_train_ttt in \
-  "w32zhong/confused-snow-233__pondering_ttt12,12" \
-  "w32zhong/fearless-river-231__pondering_ttt10,10" \
-  "w32zhong/neat-hill-232__pondering_ttt8,8" \
-  "w32zhong/toasty-durian-227__tau3,5" \
-  "w32zhong/decent-cherry-234__baseline_ttt12" \
-  "w32zhong/jolly-elevator__pondering_baseline_ep1step120k" \
-  "w32zhong/vital-energy__annealing5_ep3_step_890K" \
+  "w32zhong/pretty-bee__PonderEagle_ttt12_ep2_tau3_3_100_datacombined" \
+  "w32zhong/golden-snowball__PonderEagle_ttt12_ep2_tau5_5_100_datacombined" \
+  "w32zhong/glad-jazz__PonderEagle_ttt12_ep2_tau10_10_100_datacombined" \
+  "w32zhong/genial-water__PonderEagle_ttt12_ep2_tau20_20_100_datacombined" \
   ; do
   for tree in 5,1,7   8,1,10  10,1,12  12,1,14  15,1,17  20,1,22  \
               5,5,25  8,5,40  10,5,50  12,5,60  15,5,75  20,5,100 \
@@ -36,15 +33,18 @@ for model_and_train_ttt in \
     ; do
     IFS=',' read -r model train_ttt <<< $model_and_train_ttt
     IFS=',' read -r depth top_k total_k <<< $tree
-    if [[ "$model" =~ "baseline" ]]; then
-      options="disabled"
-    elif [ $top_k -eq 1 ]; then
-      #options="disabled random joint greedy"
-      options="disabled greedy"
-    else
-      #options="disabled random greedy_max greedy_min greedy_avg"
-      options="disabled greedy_min greedy_avg"
-    fi
+
+    #if [[ "$model" =~ "baseline" ]]; then
+    #  options="disabled"
+    #elif [ $top_k -eq 1 ]; then
+    #  #options="disabled random joint greedy"
+    #  options="disabled greedy"
+    #else
+    #  #options="disabled random greedy_max greedy_min greedy_avg"
+    #  options="disabled greedy_min greedy_avg"
+    #fi
+    options="disabled greedy1_avg"
+
     for pondering_threshold in 0.8; do
       for pondering_options in $options; do
         # (optional) skip extrapolation
