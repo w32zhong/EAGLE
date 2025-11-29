@@ -160,3 +160,4 @@ cython_debug/
 #.idea/
 
 mt_bench/
+mt_bench.*/

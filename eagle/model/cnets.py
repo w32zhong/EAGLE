@@ -539,12 +539,13 @@ class Model(nn.Module):
         self.norm=LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.logsoftmax = nn.LogSoftmax(dim=-1)
 
-        if '1' in pondering_options:
-            self.gate_linear1 = nn.Linear(config.hidden_size, 1)
-            self.gate_linear2 = nn.Linear(config.hidden_size, 1)
-        else:
-            self.gate_linear = nn.Linear(config.hidden_size, 1)
-        self.gate = nn.Sigmoid()
+        if pondering_options != 'disabled':
+            if '1' in pondering_options:
+                self.gate_linear1 = nn.Linear(config.hidden_size, 1)
+                self.gate_linear2 = nn.Linear(config.hidden_size, 1)
+            else:
+                self.gate_linear = nn.Linear(config.hidden_size, 1)
+            self.gate = nn.Sigmoid()
 
         d2t=torch.zeros((config.draft_vocab_size),dtype=torch.long)
         t2d=torch.zeros((config.vocab_size),dtype=torch.bool)
