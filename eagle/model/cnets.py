@@ -193,7 +193,7 @@ class LlamaDynamicNTKScalingRotaryEmbedding(LlamaRotaryEmbedding):
 class LlamaAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
-    def __init__(self, config):
+    def __init__(self, config, idx=0):
         super().__init__()
         self.config = config
         self.hidden_size = config.hidden_size
@@ -208,9 +208,10 @@ class LlamaAttention(nn.Module):
                 f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
                 f" and `num_heads`: {self.num_heads})."
             )
-        self.q_proj = nn.Linear(self.hidden_size * 2, self.num_heads * self.head_dim, bias=False)
-        self.k_proj = nn.Linear(self.hidden_size * 2, self.num_key_value_heads * self.head_dim, bias=False)
-        self.v_proj = nn.Linear(self.hidden_size * 2, self.num_key_value_heads * self.head_dim, bias=False)
+        factor = 2 if idx ==  0 else 1
+        self.q_proj = nn.Linear(self.hidden_size * factor, self.num_heads * self.head_dim, bias=False)
+        self.k_proj = nn.Linear(self.hidden_size * factor, self.num_key_value_heads * self.head_dim, bias=False)
+        self.v_proj = nn.Linear(self.hidden_size * factor, self.num_key_value_heads * self.head_dim, bias=False)
         self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=False)
         self._init_rope()
 
@@ -387,16 +388,15 @@ class LlamaRMSNorm(nn.Module):
 
 
 class LlamaDecoderLayeremb(nn.Module):
-    def __init__(self, config, last=True):
+    def __init__(self, config, idx=0):
         super().__init__()
         self.hidden_size = config.hidden_size
-        self.self_attn = LlamaAttention(config=config)
+        self.self_attn = LlamaAttention(config=config, idx=idx)
         self.mlp = LlamaMLP(config)
-        self.last = last
-        # self.fc = nn.Linear(config.hidden_size * 2, config.hidden_size)
-        self.hidden_norm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
-        self.input_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
-        # if self.index!=0:
+        self.idx = idx
+        if idx == 0:
+            self.hidden_norm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+            self.input_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
         self.post_attention_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
@@ -426,10 +426,10 @@ class LlamaDecoderLayeremb(nn.Module):
 
         residual = hidden_states
 
-        hidden_states = self.hidden_norm(hidden_states)
-        input_emb = self.input_layernorm(input_emb)
-
-        hidden_states = torch.cat((input_emb, hidden_states), dim=-1)
+        if self.idx == 0:
+            hidden_states = self.hidden_norm(hidden_states)
+            input_emb = self.input_layernorm(input_emb)
+            hidden_states = torch.cat((input_emb, hidden_states), dim=-1)
 
 
         # cache_hidden.append(hidden_states)
@@ -531,7 +531,7 @@ class Model(nn.Module):
         # print("depth",depth)
         # print("top_k",top_k)
         self.hidden_size = config.hidden_size
-        self.midlayer = LlamaDecoderLayeremb(config)
+
         if hasattr(config, "target_hidden_size"):
             self.fc = nn.Linear(config.target_hidden_size * 3, self.hidden_size, bias=False)
         else:
@@ -546,6 +546,14 @@ class Model(nn.Module):
             else:
                 self.gate_linear = nn.Linear(config.hidden_size, 1)
             self.gate = nn.Sigmoid()
+
+            if 'ML' in pondering_options:
+                self.midlayers = nn.ModuleList([
+                    LlamaDecoderLayeremb(config, idx=idx)
+                    for idx in range(config.num_hidden_layers)
+                ])
+            else:
+                self.midlayer = LlamaDecoderLayeremb(config)
 
         d2t=torch.zeros((config.draft_vocab_size),dtype=torch.long)
         t2d=torch.zeros((config.vocab_size),dtype=torch.bool)
@@ -653,22 +661,23 @@ class Model(nn.Module):
         save_last_target_states = hidden_states[:, -1]
 
         all_hidden_states = () if output_hidden_states else None
+        assert use_cache
         next_decoder_cache = () if use_cache else None
-
-        past_key_value = past_key_values[0] if past_key_values is not None else None
-        layer_outputs = self.midlayer(
-            input_emb=inputs_embeds,
-            hidden_states=hidden_states,
-            attention_mask=attention_mask,
-            position_ids=position_ids,
-            past_key_value=past_key_value,
-            output_attentions=output_attentions,
-            use_cache=True,
-        )
-        if use_cache:
-            next_decoder_cache += (layer_outputs[2 if output_attentions else 1],)
-        hidden_states = layer_outputs[0]
-
+        layers = [self.midlayer] if hasattr(self, 'midlayer') else self.midlayers
+        for idx, midlayer in enumerate(self.midlayers):
+            past_key_value = past_key_values[idx] if past_key_values is not None else None
+            layer_outputs = midlayer(
+                input_emb=inputs_embeds,
+                hidden_states=hidden_states,
+                attention_mask=attention_mask,
+                position_ids=position_ids,
+                past_key_value=past_key_value,
+                output_attentions=output_attentions,
+                use_cache=use_cache,
+            )
+            if use_cache:
+                next_decoder_cache += (layer_outputs[2 if output_attentions else 1],)
+            hidden_states = layer_outputs[0]
 
         if use_cache:
             return hidden_states, next_decoder_cache, save_last_target_states
