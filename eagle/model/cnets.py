@@ -539,7 +539,7 @@ class Model(nn.Module):
         self.norm=LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.logsoftmax = nn.LogSoftmax(dim=-1)
 
-        if pondering_options != 'disabled':
+        if not pondering_options.startswith('disabled'):
             if '1' in pondering_options:
                 self.gate_linear1 = nn.Linear(config.hidden_size, 1)
                 self.gate_linear2 = nn.Linear(config.hidden_size, 1)
@@ -547,13 +547,13 @@ class Model(nn.Module):
                 self.gate_linear = nn.Linear(config.hidden_size, 1)
             self.gate = nn.Sigmoid()
 
-            if 'ML' in pondering_options:
-                self.midlayers = nn.ModuleList([
-                    LlamaDecoderLayeremb(config, idx=idx)
-                    for idx in range(config.num_hidden_layers)
-                ])
-            else:
-                self.midlayer = LlamaDecoderLayeremb(config)
+        if 'ML' in pondering_options:
+            self.midlayers = nn.ModuleList([
+                LlamaDecoderLayeremb(config, idx=idx)
+                for idx in range(config.num_hidden_layers)
+            ])
+        else:
+            self.midlayer = LlamaDecoderLayeremb(config)
 
         d2t=torch.zeros((config.draft_vocab_size),dtype=torch.long)
         t2d=torch.zeros((config.vocab_size),dtype=torch.bool)
@@ -664,7 +664,7 @@ class Model(nn.Module):
         assert use_cache
         next_decoder_cache = () if use_cache else None
         layers = [self.midlayer] if hasattr(self, 'midlayer') else self.midlayers
-        for idx, midlayer in enumerate(self.midlayers):
+        for idx, midlayer in enumerate(layers):
             past_key_value = past_key_values[idx] if past_key_values is not None else None
             layer_outputs = midlayer(
                 input_emb=inputs_embeds,
@@ -688,8 +688,6 @@ class Model(nn.Module):
         self.stable_kv = None
 
     def early_exit(self, hidden, i):
-        # Valid options: ['disabled', 'joint[1]_*', 'greedy[1]_*', 'random', 'stats_*']
-        # where * is in ['max', 'min', 'avg', *]
         def aggregate_children(ev, mode):
             if mode == 'max':
                 return ev.max().item()
@@ -700,7 +698,7 @@ class Model(nn.Module):
             else:
                 return 1 - torch.prod(1 - ev).item()
 
-        if self.pondering_options == 'disabled':
+        if self.pondering_options.startswith('disabled'):
             return False
 
         if i == self.depth:
