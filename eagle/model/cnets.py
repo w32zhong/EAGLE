@@ -701,17 +701,24 @@ class Model(nn.Module):
         if self.pondering_options.startswith('disabled'):
             return False
 
+        ev = None
         if i == self.depth:
             exit_i = 1.0
-        else:
-            if '1' in self.pondering_options:
-                if i == -1:
-                    ev = self.gate(self.gate_linear1(hidden))
+        elif i == -1:
+            if hasattr(self, 'gate_linear1'):
+                if '0' in self.pondering_options:
+                    exit_i = 0.0
                 else:
-                    ev = self.gate(self.gate_linear2(hidden))
+                    ev = self.gate(self.gate_linear1(hidden))
+            else:
+                ev = self.gate(self.gate_linear(hidden))
+        else:
+            if hasattr(self, 'gate_linear2'):
+                ev = self.gate(self.gate_linear2(hidden))
             else:
                 ev = self.gate(self.gate_linear(hidden))
 
+        if ev is not None:
             aggregate_mode = self.pondering_options[-3:]
             exit_i = ev.item() if self.top_k == 1 else aggregate_children(ev, aggregate_mode)
 
