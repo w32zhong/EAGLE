@@ -310,7 +310,8 @@ class EaModel(nn.Module):
                     break
 
             if 'verbose' in self.ea_layer.pondering_options:
-                print(accept_length.item(), self.tokenizer.decode(input_ids[0, -accept_length-1:]), end=" ")
+                print(f'<{accept_length.item()}>',
+                      self.tokenizer.decode(input_ids[0, -accept_length-1:]), end=" ")
 
             if self.tokenizer.eos_token_id in input_ids[0, input_len:].tolist():
                 break
