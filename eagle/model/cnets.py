@@ -705,13 +705,13 @@ class Model(nn.Module):
         if i == self.depth:
             exit_i = 1.0
         elif i == -1:
-            if hasattr(self, 'gate_linear1'):
-                if '0' in self.pondering_options:
-                    exit_i = 0.0
-                else:
-                    ev = self.gate(self.gate_linear1(hidden))
+            if '0' in self.pondering_options:
+                exit_i = 0.0
             else:
-                ev = self.gate(self.gate_linear(hidden))
+                if hasattr(self, 'gate_linear1'):
+                    ev = self.gate(self.gate_linear1(hidden))
+                else:
+                    ev = self.gate(self.gate_linear(hidden))
         else:
             if hasattr(self, 'gate_linear2'):
                 ev = self.gate(self.gate_linear2(hidden))

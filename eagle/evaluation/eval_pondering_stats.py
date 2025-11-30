@@ -3,92 +3,112 @@ import fire
 import numpy as np
 from collections import defaultdict
 import matplotlib.pyplot as plt
-from colorama import Fore, Style
+from colorama import Fore, Back, Style
 
 
-def probs(json_file='pondering_stats.json', threshold=0.8):
+def parse_data_lengths(j):
+    max_accept_length = max(j['a'])
+    exit_range, samples, = [], None
+    keys = j.keys()
+    for i in range(-1, len(keys)):
+        key = f'e{i}'
+        if key in keys:
+            exit_range.append(i)
+            if samples is not None:
+                assert samples == len(j[key])
+            else:
+                samples = len(j[key])
+        else:
+            break
+    return exit_range, max_accept_length
+
+
+def calc_stats(j, exit_range, threshold):
+    lengths, true_pos, false_pos, true_neg, false_neg = [], [], [], [], []
+    for iter_num, accept_length in enumerate(j['a']):
+        exit_length = None
+        for i in exit_range:
+            e_i = j[f'e{i}'][iter_num]
+            color = Style.RESET_ALL
+            if e_i >= threshold:
+                if i + 1 >= accept_length:
+                    color += Fore.GREEN # good exit
+                    true_pos.append(e_i)
+                else:
+                    color += Fore.RED # exit too early!
+                    false_pos.append(e_i)
+
+                if exit_length is None:
+                    exit_length = i + 1
+            else:
+                if i + 1 >= accept_length:
+                    false_neg.append(e_i)
+                else:
+                    true_neg.append(e_i)
+            color += Back.MAGENTA if i >= accept_length else color
+            print(f'{color}{e_i:.2f}{Style.RESET_ALL}',
+                  end=' | ' if i == -1 else ' ')
+        lengths.append((exit_length or accept_length, accept_length))
+        print()
+    return lengths, true_pos, false_pos, true_neg, false_neg
+
+
+def probs(json_file='pondering_stats.json', threshold=1.0):
     with open(json_file) as fh:
         j = json.load(fh)
-    max_length = len(j.keys()) - 1
-    for i in range(max_length):
-        assert len(j[f'e{i}']) == len(j['a'])
-    print(f'max(accept_length)={max(j['a'])}, max_length={max_length}')
-    prev_survive_probs, last_survive_probs = [], []
-    prev_exit_probs, last_exit_probs = [], []
-    for iter_num, accept_length in enumerate(j['a']):
-        if accept_length == 0: continue
-        survive = 1.0
-        for i in range(accept_length):
-            e_i = j[f'e{i}'][iter_num]
-            survive *= (1 - e_i)
-            prev_exit_probs.append(e_i)
-            prev_survive_probs.append(survive)
-            color = Fore.RED if e_i > threshold else Style.RESET_ALL
-            print(f'{color}{round(e_i, 2)}{Style.RESET_ALL}', end=' ')
-        print(Fore.YELLOW + '| ', end=Style.RESET_ALL)
-        if accept_length > 0:
-            prev_exit_probs.pop()
-            prev_survive_probs.pop()
-            last_exit_probs.append(e_i)
-            last_survive_probs.append(survive)
-        for i in range(accept_length, max_length):
-            e_i = j[f'e{i}'][iter_num]
-            color = Fore.RED if e_i > threshold else Style.RESET_ALL
-            print(f'{color}{round(e_i, 2)}{Style.RESET_ALL}', end=' ')
-        print()
+    exit_range, max_accept_length = parse_data_lengths(j)
+    print(exit_range, max_accept_length)
+
+    _, true_pos, false_pos, true_neg, false_neg = calc_stats(j, exit_range, threshold)
 
     fig, ax = plt.subplots(1, 4, figsize=(16, 2))
-    ax[0].hist(prev_exit_probs, bins=10)
-    ax[0].set_xlabel("P(exit) on accept")
+    ax[0].hist(true_pos, bins=10)
+    ax[0].set_xlabel("True Exit")
     ax[0].set_ylabel("Frequency")
 
-    ax[1].hist(last_exit_probs, bins=10)
-    ax[1].set_xlabel("P(exit) on reject")
+    ax[1].hist(false_pos, bins=10)
+    ax[1].set_xlabel("False Exit")
 
-    ax[2].hist(prev_survive_probs, bins=10)
-    ax[2].set_xlabel("P(survival) on accept")
+    ax[2].hist(true_neg, bins=10)
+    ax[2].set_xlabel("True Non-Exit")
 
-    ax[3].hist(last_survive_probs, bins=10)
-    ax[3].set_xlabel("P(survival) on reject")
+    ax[3].hist(false_neg, bins=10)
+    ax[3].set_xlabel("False Non-Exit")
 
     plt.tight_layout()
-    plt.savefig(f'{json_file}_probs.png')
+    plt.savefig(f'{json_file}_probs_threshold{threshold}.png')
 
 
-def optimal(json_file='pondering_stats.json', use_linear_C=True):
+def optimal(json_file='pondering_stats.json', A=1.365, B=23.618):
     with open(json_file) as fh:
         j = json.load(fh)
-    max_length = len(j.keys()) - 1
+    exit_range, max_accept_length = parse_data_lengths(j)
+    print(exit_range, max_accept_length)
 
-    if use_linear_C:
-        C = [(1.16*(i+1) + 18.74) for i in range(max_length)]
-    else:
-        C = [42.07, 44.50, 46.58, 49.12, 51.28, 52.99, 55.59, 57.63, 59.75, 62.45, 64.18, 66.87, 68.46]
+    C = [A * (i+1) + B for i in exit_range]
     print(C)
 
     data = []
     thresholds = [0.3, 0.4, 0.5, 0.6, 0.7,   0.8, 0.85, 0.90, 0.95, 1.0]
     for threshold in thresholds:
         speed_gain = []
-        for iter_num, accept_length in enumerate(j['a']):
-            if accept_length == 0: continue
-            e = [j[f'e{i}'][iter_num] for i in range(max_length)]
-            exit_length = next((i for i, e_i in enumerate(e) if e_i > threshold), max_length - 1) + 1
-
-            static_speed = (accept_length + 1) / C[max_length - 1]
-            dynamic_speed = (min(accept_length, exit_length) + 1) / C[exit_length - 1]
+        lengths, *_ = calc_stats(j, exit_range, threshold)
+        for exit_length, accept_length in lengths:
+            bonus = 1;
+            static_speed = (accept_length + bonus) / C[max_accept_length]
+            dynamic_speed = (exit_length + bonus) / C[exit_length]
             speed_gain.append(dynamic_speed - static_speed)
         data.append(speed_gain)
 
     fig, ax = plt.subplots(2, 5, figsize=(12, 6))
     for i, speed_gain in enumerate(data):
         threshold = thresholds[i]
-        ax[i // 5, i % 5].hist(speed_gain, bins=max_length)
+        ax[i // 5, i % 5].hist(speed_gain, bins=max_accept_length)
         ax[i // 5, i % 5].set_title(f"threshold={threshold:.2f}")
         ax[i // 5, i % 5].set_xlabel("Speed Gain")
 
     plt.tight_layout()
-    plt.savefig(f'{json_file}_optimal_linear{use_linear_C}.png')
+    plt.savefig(f'{json_file}_optimal_A{A:.2f}_B{B:.2f}.png')
 
 
 def costs(json_file='pondering_stats.json'):
@@ -100,23 +120,23 @@ def costs(json_file='pondering_stats.json'):
     for iter_num, exit_at in enumerate(j['exit@']):
         C_hist[exit_at].append(j['C'][iter_num])
 
-    C_hist = [np.array(C_hist[i]) for i in range(max_exit_i + 1)]
+    print('keys', C_hist.keys())
+    C_hist = [np.array(C_hist[i]) for i in range(-1, max_exit_i + 1)]
     C_mean = [h.mean().item() for h in C_hist]
+    print('mean', C_mean)
     C_std = [h.std().item() for h in C_hist]
+    print('std', C_std)
 
-    x = np.arange(len(C_mean))
-    y = np.array(C_mean)
-    a, b = np.polyfit(x, y, 1) # degree 1 → linear
-    interpolated = [(a * x + b).item() for x in range(len(C_mean))]
-
-    print(C_mean)
-    print(C_std)
-    print(a, b)
-    print(interpolated)
+    X = np.arange(len(C_mean))
+    Y = np.array(C_mean)
+    A, B = np.polyfit(X, Y, 1) # degree 1 → linear iterpolation
+    interpolated = [(A * x + B).item() for x in range(len(C_mean))]
+    print('interpolated', interpolated)
+    print('A,B', round(A, 2), round(B, 2))
 
     fig, ax = plt.subplots(1, 1, figsize=(8, 6))
-    ax.scatter(x, y, color='red')
-    ax.plot(x, interpolated)
+    ax.scatter(X, Y, color='red')
+    ax.plot(X, interpolated)
     plt.tight_layout()
     plt.savefig(f'{json_file}_costs.png')
 
