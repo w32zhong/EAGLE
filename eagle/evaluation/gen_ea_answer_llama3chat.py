@@ -306,9 +306,11 @@ def get_model_answers(
             }
             fout.write(json.dumps(ans_json) + "\n")
 
-    print(model.ea_layer.pondering_stats.report())
-    with open('pondering_stats.json', 'w') as fh:
-        json.dump(model.ea_layer.pondering_stats._hist, fh)
+    if model.ea_layer.pondering_options.startswith('stats'):
+        jname = model.ea_layer.pondering_options.replace('stats_', '')
+        print(model.ea_layer.pondering_stats.report())
+        with open(f'pondering_stats__{jname}.json', 'w') as fh:
+            json.dump(model.ea_layer.pondering_stats._hist, fh)
 
 
 def reorg_answer_file(answer_file):

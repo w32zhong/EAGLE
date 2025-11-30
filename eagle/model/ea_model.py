@@ -260,7 +260,7 @@ class EaModel(nn.Module):
         new_token = 0
         max_length = max_length - self.ea_layer.total_tokens - 10
         for idx in range(max_length):
-            if self.ea_layer.pondering_options == 'stats_cost':
+            if self.ea_layer.pondering_options.startswith('stats_cost'):
                 self.ea_layer.pondering_stats.start('C')
 
             # with Timer("all"):
@@ -284,7 +284,7 @@ class EaModel(nn.Module):
             best_candidate, accept_length, sample_p = evaluate_posterior(
                 logits, candidates, logits_processor
             )
-            if self.ea_layer.pondering_options == 'stats':
+            if self.ea_layer.pondering_options.startswith('stats'):
                 self.ea_layer.pondering_stats._hist[f'a'].append(accept_length.item())
             # Adjusting the input sequence, draft model forward
             input_ids, draft_tokens, retrieve_indices, tree_mask, tree_position_ids, new_token, hidden_state, sample_token = update_inference_inputs(
@@ -302,7 +302,7 @@ class EaModel(nn.Module):
                 sample_p
             )
 
-            if self.ea_layer.pondering_options == 'stats_cost':
+            if self.ea_layer.pondering_options.startswith('stats_cost'):
                 self.ea_layer.pondering_stats.stop('C')
 
             if is_llama3:

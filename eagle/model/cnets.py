@@ -726,12 +726,12 @@ class Model(nn.Module):
         elif self.pondering_options.startswith('random'):
             exit_condition = (random.uniform(0, 1) > self.pondering_threshold)
 
-        elif self.pondering_options == 'stats_cost':
+        elif self.pondering_options.startswith('stats_cost'):
             exit_condition = (random.uniform(0, 1) > self.pondering_threshold) or (i == self.depth)
             if exit_condition:
                 self.pondering_stats._hist[f'exit@'].append(i)
 
-        elif self.pondering_options == 'stats':
+        elif self.pondering_options.startswith('stats'):
             self.pondering_stats._hist[f'e{i}'].append(exit_i)
             exit_condition = False
 
