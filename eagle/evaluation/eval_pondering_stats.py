@@ -46,14 +46,14 @@ def calc_stats(j, exit_range, threshold):
                 else:
                     true_neg.append(e_i)
             color += Back.MAGENTA if i >= accept_length else color
-            print(f'{color}{e_i:.2f}{Style.RESET_ALL}',
+            print(f'{color}{e_i:.4f}{Style.RESET_ALL}',
                   end=' | ' if i == -1 else ' ')
         lengths.append((exit_length or accept_length, accept_length))
         print()
     return lengths, true_pos, false_pos, true_neg, false_neg
 
 
-def probs(json_file='pondering_stats.json', threshold=1.0):
+def probs(json_file='pondering_stats.json', threshold=0.9):
     with open(json_file) as fh:
         j = json.load(fh)
     exit_range, max_accept_length = parse_data_lengths(j)
@@ -61,20 +61,19 @@ def probs(json_file='pondering_stats.json', threshold=1.0):
 
     _, true_pos, false_pos, true_neg, false_neg = calc_stats(j, exit_range, threshold)
 
-    fig, ax = plt.subplots(1, 4, figsize=(16, 2))
-    ax[0].hist(true_pos, bins=10)
-    ax[0].set_xlabel("True Exit")
-    ax[0].set_ylabel("Frequency")
+    fig, ax = plt.subplots(1, 2, figsize=(8, 4))
+    ax[0].hist(true_pos, bins=10, alpha=0.6, label="true pos", log=True)
+    ax[0].hist(false_pos, bins=10, alpha=0.6, label="false pos", log=True)
+    ax[0].set_xlabel("Exit")
+    ax[0].set_ylabel("Log Frequency")
+    ax[0].legend()
 
-    ax[1].hist(false_pos, bins=10)
-    ax[1].set_xlabel("False Exit")
+    ax[1].hist(true_neg, bins=10, alpha=0.6, label="true neg", log=True)
+    ax[1].hist(false_neg, bins=10, alpha=0.6,label="false neg", log=True)
+    ax[1].set_xlabel("Non-Exit")
+    ax[1].legend()
 
-    ax[2].hist(true_neg, bins=10)
-    ax[2].set_xlabel("True Non-Exit")
-
-    ax[3].hist(false_neg, bins=10)
-    ax[3].set_xlabel("False Non-Exit")
-
+    fig.suptitle(f'Model Predicted Probs (threshold={threshold})')
     plt.tight_layout()
     plt.savefig(f'{json_file}_probs_threshold{threshold}.png')
 
@@ -89,7 +88,7 @@ def optimal(json_file='pondering_stats.json', A=1.365, B=23.618):
     print(C)
 
     data = []
-    thresholds = [0.3, 0.4, 0.5, 0.6, 0.7,   0.8, 0.85, 0.90, 0.95, 1.0]
+    thresholds = [0.3, 0.4, 0.5, 0.6, 0.7,   0.8, 0.90, 0.95, 0.99, 1.0]
     for threshold in thresholds:
         speed_gain = []
         lengths, *_ = calc_stats(j, exit_range, threshold)
