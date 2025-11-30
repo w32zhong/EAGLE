@@ -103,9 +103,10 @@ def optimal(json_file='pondering_stats.json', A=1.365, B=23.618):
     fig, ax = plt.subplots(2, 5, figsize=(12, 6))
     for i, speed_gain in enumerate(data):
         threshold = thresholds[i]
+        mean_speed_gain = sum(speed_gain) / (len(speed_gain) + 1e-5)
         ax[i // 5, i % 5].hist(speed_gain, bins=max_accept_length)
         ax[i // 5, i % 5].set_title(f"threshold={threshold:.2f}")
-        ax[i // 5, i % 5].set_xlabel("Speed Gain")
+        ax[i // 5, i % 5].set_xlabel(f"Speed Gain (avg={mean_speed_gain:.2f})")
 
     plt.tight_layout()
     plt.savefig(f'{json_file}_optimal_A{A:.2f}_B{B:.2f}.png')
