@@ -22,15 +22,16 @@ run() {
 }
 
 for model_and_train_ttt in \
-  "w32zhong/pretty-bee__PonderEagle_ttt12_ep2_tau3_3_100_datacombined" \
-  "w32zhong/golden-snowball__PonderEagle_ttt12_ep2_tau5_5_100_datacombined" \
-  "w32zhong/glad-jazz__PonderEagle_ttt12_ep2_tau10_10_100_datacombined" \
-  "w32zhong/genial-water__PonderEagle_ttt12_ep2_tau20_20_100_datacombined" \
+  "w32zhong/resilient-paper__annealing100_ep5_step_1465K" \
+  "w32zhong/misty-cherry__annealing10_ep5_step_1465K" \
   ; do
-  for tree in 5,1,7   8,1,10  10,1,12  12,1,14  15,1,17  20,1,22  \
-              5,5,25  8,5,40  10,5,50  12,5,60  15,5,75  20,5,100 \
-              5,10,50  8,10,80  10,10,90  12,10,100 \
-    ; do
+
+  #for tree in 5,1,7   8,1,10  10,1,12  12,1,14  15,1,17  20,1,22  \
+  #            5,5,25  8,5,40  10,5,50  12,5,60  15,5,75  20,5,100 \
+  #            5,10,50  8,10,80  10,10,90  12,10,100 \
+  #  ; do
+
+  for tree in 15,10,80 15,1,17; do
     IFS=',' read -r model train_ttt <<< $model_and_train_ttt
     IFS=',' read -r depth top_k total_k <<< $tree
 
@@ -43,7 +44,8 @@ for model_and_train_ttt in \
     #  #options="disabled random greedy_max greedy_min greedy_avg"
     #  options="disabled greedy_min greedy_avg"
     #fi
-    options="disabled greedy1_avg"
+
+    options="stats_verbose_0_avg stats_cost_0"
 
     for pondering_threshold in 0.8; do
       for pondering_options in $options; do
