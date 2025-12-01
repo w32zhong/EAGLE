@@ -72,11 +72,13 @@ def calc_stats(j, exit_range, threshold, abort_on_first_exit=True):
     return lengths, true_pos, false_pos, true_neg, false_neg
 
 
-def calc_speed_gain(lengths, max_accept_length, C, bonus=1):
+def calc_speed_gain(lengths, max_accept_length, C, bonus=1, ideal=False):
     speed_gain = []
     for exit_length, accept_length in lengths:
         static_speed = (accept_length + bonus) / C[max_accept_length]
-        if exit_length is None:
+        if ideal:
+            dynamic_speed = (accept_length + bonus) / C[accept_length]
+        elif exit_length is None:
             dynamic_speed = (accept_length + bonus) / C[max_accept_length]
         else:
             assert 0 <= exit_length <= max_accept_length
@@ -85,14 +87,15 @@ def calc_speed_gain(lengths, max_accept_length, C, bonus=1):
     return speed_gain
 
 
-def probs(json_file='pondering_stats.json', threshold=0.9, A=1.365, B=23.618, abort_on_first_exit=False):
+def probs(json_file='pondering_stats.json', threshold=0.9, A=1.365, B=23.618,
+          abort_on_first_exit=False, ideal=False):
     with open(json_file) as fh:
         j = json.load(fh)
     exit_range, max_accept_length = parse_data_lengths(j)
     lengths, true_pos, false_pos, true_neg, false_neg = calc_stats(j, exit_range, threshold,
                                                           abort_on_first_exit=abort_on_first_exit)
     C = [A * (i+1) + B for i in exit_range]
-    speed_gain = calc_speed_gain(lengths, max_accept_length, C)
+    speed_gain = calc_speed_gain(lengths, max_accept_length, C, ideal=ideal)
     avg_speed_gain = sum(speed_gain) / (len(speed_gain) + 1e-5)
     print('avg_speed_gain', round(avg_speed_gain, 3))
 
