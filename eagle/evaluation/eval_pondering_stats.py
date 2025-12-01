@@ -67,7 +67,7 @@ def calc_stats(j, exit_range, threshold, abort_on_first_exit=True):
                   end=' | ' if i == -1 else ' ')
             if abort_on_first_exit and exit_length is not None:
                 break
-        lengths.append((exit_length or accept_length, accept_length))
+        lengths.append((exit_length, accept_length))
         print()
     return lengths, true_pos, false_pos, true_neg, false_neg
 
@@ -76,7 +76,11 @@ def calc_speed_gain(lengths, max_accept_length, C, bonus=1):
     speed_gain = []
     for exit_length, accept_length in lengths:
         static_speed = (accept_length + bonus) / C[max_accept_length]
-        dynamic_speed = (exit_length + bonus) / C[exit_length]
+        if exit_length is None:
+            dynamic_speed = (accept_length + bonus) / C[max_accept_length]
+        else:
+            assert 0 <= exit_length <= max_accept_length
+            dynamic_speed = (min(exit_length, accept_length) + bonus) / C[exit_length]
         speed_gain.append(dynamic_speed - static_speed)
     return speed_gain
 
