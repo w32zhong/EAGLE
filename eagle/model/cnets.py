@@ -725,16 +725,16 @@ class Model(nn.Module):
         if self.pondering_options.startswith('joint'):
             if i == 0: self.survive = 1.0
             self.survive *= (1 - exit_i)
-            exit_condition = (self.survive < 1 - self.pondering_threshold)
+            exit_condition = (self.survive <= 1 - self.pondering_threshold)
 
         elif self.pondering_options.startswith('greedy'):
-            exit_condition = (exit_i > self.pondering_threshold)
+            exit_condition = (exit_i >= self.pondering_threshold)
 
         elif self.pondering_options.startswith('random'):
-            exit_condition = (random.uniform(0, 1) > self.pondering_threshold)
+            exit_condition = (random.uniform(0, 1) >= self.pondering_threshold)
 
         elif self.pondering_options.startswith('stats_cost'):
-            exit_condition = (random.uniform(0, 1) > self.pondering_threshold) or (i == self.depth)
+            exit_condition = (random.uniform(0, 1) >= self.pondering_threshold) or (i == self.depth)
             if exit_condition:
                 self.pondering_stats._hist[f'exit@'].append(i)
 

@@ -62,15 +62,15 @@ def probs(json_file='pondering_stats.json', threshold=0.9):
     _, true_pos, false_pos, true_neg, false_neg = calc_stats(j, exit_range, threshold)
 
     fig, ax = plt.subplots(1, 2, figsize=(8, 4))
-    ax[0].hist(true_pos, bins=10, alpha=0.6, label="true pos", log=True)
-    ax[0].hist(false_pos, bins=10, alpha=0.6, label="false pos", log=True)
-    ax[0].set_xlabel("Exit")
+    ax[0].hist(true_neg, bins=10, alpha=0.6, label="true neg", log=True)
+    ax[0].hist(false_neg, bins=10, alpha=0.6,label="false neg", log=True)
+    ax[0].set_xlabel("Non-Exit")
     ax[0].set_ylabel("Log Frequency")
     ax[0].legend()
 
-    ax[1].hist(true_neg, bins=10, alpha=0.6, label="true neg", log=True)
-    ax[1].hist(false_neg, bins=10, alpha=0.6,label="false neg", log=True)
-    ax[1].set_xlabel("Non-Exit")
+    ax[1].hist(true_pos, bins=10, alpha=0.6, label="true pos", log=True)
+    ax[1].hist(false_pos, bins=10, alpha=0.6, label="false pos", log=True)
+    ax[1].set_xlabel("Exit")
     ax[1].legend()
 
     fig.suptitle(f'Model Predicted Probs (threshold={threshold})')
@@ -115,6 +115,7 @@ def costs(json_file='pondering_stats.json'):
     with open(json_file) as fh:
         j = json.load(fh)
     max_exit_i = max(j['exit@'])
+    print('max_exit_i', max_exit_i)
 
     C_hist = defaultdict(list)
     for iter_num, exit_at in enumerate(j['exit@']):
@@ -137,6 +138,9 @@ def costs(json_file='pondering_stats.json'):
     fig, ax = plt.subplots(1, 1, figsize=(8, 6))
     ax.scatter(X, Y, color='red')
     ax.plot(X, interpolated)
+    ax.set_ylabel("Cost")
+    ax.set_xlabel("Exit Length")
+    fig.suptitle(f'Model Cost Interpolation (A={A:.2f}, B={B:.2f})')
     plt.tight_layout()
     plt.savefig(f'{json_file}_costs.png')
 
