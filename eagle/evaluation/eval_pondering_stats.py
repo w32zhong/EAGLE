@@ -7,7 +7,6 @@ from colorama import Fore, Back, Style
 
 
 def parse_data_lengths(j):
-    max_accept_length = max(j['a'])
     exit_range, samples, = [], None
     keys = j.keys()
     for i in range(-1, len(keys)):
@@ -20,10 +19,16 @@ def parse_data_lengths(j):
                 samples = len(j[key])
         else:
             break
+    max_accept_length = max(exit_range) + 1
+    if max_accept_length != max(j['a']):
+        print(Fore.YELLOW, """
+              Warning: max_accept_length != max recorded accept_length!
+              This may indicate the model is not performing as expected.
+              """, Style.RESET_ALL)
     return exit_range, max_accept_length
 
 
-def calc_stats(j, exit_range, threshold):
+def calc_stats(j, exit_range, threshold, abort_on_first_exit=True):
     lengths, true_pos, false_pos, true_neg, false_neg = [], [], [], [], []
     for iter_num, accept_length in enumerate(j['a']):
         exit_length = None
@@ -48,18 +53,19 @@ def calc_stats(j, exit_range, threshold):
             color += Back.MAGENTA if i >= accept_length else color
             print(f'{color}{e_i:.4f}{Style.RESET_ALL}',
                   end=' | ' if i == -1 else ' ')
+            if abort_on_first_exit and exit_length is not None:
+                break
         lengths.append((exit_length or accept_length, accept_length))
         print()
     return lengths, true_pos, false_pos, true_neg, false_neg
 
 
-def probs(json_file='pondering_stats.json', threshold=0.9):
+def probs(json_file='pondering_stats.json', threshold=0.9, abort_on_first_exit=False):
     with open(json_file) as fh:
         j = json.load(fh)
-    exit_range, max_accept_length = parse_data_lengths(j)
-    print(exit_range, max_accept_length)
-
-    _, true_pos, false_pos, true_neg, false_neg = calc_stats(j, exit_range, threshold)
+    exit_range, _ = parse_data_lengths(j)
+    _, true_pos, false_pos, true_neg, false_neg = calc_stats(j, exit_range, threshold,
+                                                             abort_on_first_exit=abort_on_first_exit)
 
     fig, ax = plt.subplots(1, 2, figsize=(8, 4))
     ax[0].hist(true_neg, bins=10, alpha=0.6, label="true neg", log=True)
@@ -82,7 +88,6 @@ def optimal(json_file='pondering_stats.json', A=1.365, B=23.618):
     with open(json_file) as fh:
         j = json.load(fh)
     exit_range, max_accept_length = parse_data_lengths(j)
-    print(exit_range, max_accept_length)
 
     C = [A * (i+1) + B for i in exit_range]
     print(C)
