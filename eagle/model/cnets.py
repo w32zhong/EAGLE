@@ -695,8 +695,12 @@ class Model(nn.Module):
                 return ev.min().item()
             elif mode == 'avg':
                 return ev.mean().item()
+            elif self.pondering_options.startswith('random'):
+                return -1
+            elif self.pondering_options.startswith('stats_cost'):
+                return -1
             else:
-                return 1 - torch.prod(1 - ev).item()
+                assert False, "invalid aggregate_mode."
 
         if self.pondering_options.startswith('disabled'):
             return False
