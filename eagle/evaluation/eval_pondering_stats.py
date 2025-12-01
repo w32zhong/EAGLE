@@ -28,6 +28,18 @@ def parse_data_lengths(j):
     return exit_range, max_accept_length
 
 
+def exit_condition(step, prob, threshold):
+    if isinstance(threshold, tuple):
+        threshold1, phase, threshold2 = threshold
+        if step < phase:
+            return (prob >= threshold1)
+        else:
+            return (prob >= threshold2)
+    else:
+        assert isinstance(threshold, float)
+        return (prob >= threshold)
+
+
 def calc_stats(j, exit_range, threshold, abort_on_first_exit=True):
     lengths, true_pos, false_pos, true_neg, false_neg = [], [], [], [], []
     for iter_num, accept_length in enumerate(j['a']):
@@ -35,7 +47,7 @@ def calc_stats(j, exit_range, threshold, abort_on_first_exit=True):
         for i in exit_range:
             e_i = j[f'e{i}'][iter_num]
             color = Style.RESET_ALL
-            if e_i >= threshold:
+            if exit_condition(i, e_i, threshold):
                 if i + 1 >= accept_length:
                     color += Fore.GREEN # good exit
                     true_pos.append(e_i)
@@ -60,12 +72,25 @@ def calc_stats(j, exit_range, threshold, abort_on_first_exit=True):
     return lengths, true_pos, false_pos, true_neg, false_neg
 
 
-def probs(json_file='pondering_stats.json', threshold=0.9, abort_on_first_exit=False):
+def calc_speed_gain(lengths, max_accept_length, C, bonus=1):
+    speed_gain = []
+    for exit_length, accept_length in lengths:
+        static_speed = (accept_length + bonus) / C[max_accept_length]
+        dynamic_speed = (exit_length + bonus) / C[exit_length]
+        speed_gain.append(dynamic_speed - static_speed)
+    return speed_gain
+
+
+def probs(json_file='pondering_stats.json', threshold=0.9, A=1.365, B=23.618, abort_on_first_exit=False):
     with open(json_file) as fh:
         j = json.load(fh)
-    exit_range, _ = parse_data_lengths(j)
-    _, true_pos, false_pos, true_neg, false_neg = calc_stats(j, exit_range, threshold,
-                                                             abort_on_first_exit=abort_on_first_exit)
+    exit_range, max_accept_length = parse_data_lengths(j)
+    lengths, true_pos, false_pos, true_neg, false_neg = calc_stats(j, exit_range, threshold,
+                                                          abort_on_first_exit=abort_on_first_exit)
+    C = [A * (i+1) + B for i in exit_range]
+    speed_gain = calc_speed_gain(lengths, max_accept_length, C)
+    avg_speed_gain = sum(speed_gain) / (len(speed_gain) + 1e-5)
+    print('avg_speed_gain', round(avg_speed_gain, 3))
 
     fig, ax = plt.subplots(1, 2, figsize=(8, 4))
     ax[0].hist(true_neg, bins=10, alpha=0.6, label="true neg", log=True)
@@ -79,7 +104,7 @@ def probs(json_file='pondering_stats.json', threshold=0.9, abort_on_first_exit=F
     ax[1].set_xlabel("Exit")
     ax[1].legend()
 
-    fig.suptitle(f'Model Predicted Probs (threshold={threshold})')
+    fig.suptitle(f'Model Predicted Probs (threshold={threshold}, speed_gain={avg_speed_gain:.2f})')
     plt.tight_layout()
     plt.savefig(f'{json_file}_probs_threshold{threshold}.png')
 
@@ -88,29 +113,22 @@ def optimal(json_file='pondering_stats.json', A=1.365, B=23.618):
     with open(json_file) as fh:
         j = json.load(fh)
     exit_range, max_accept_length = parse_data_lengths(j)
-
     C = [A * (i+1) + B for i in exit_range]
-    print(C)
 
     data = []
     thresholds = [0.3, 0.4, 0.5, 0.6, 0.7,   0.8, 0.90, 0.95, 0.99, 1.0]
     for threshold in thresholds:
-        speed_gain = []
         lengths, *_ = calc_stats(j, exit_range, threshold)
-        for exit_length, accept_length in lengths:
-            bonus = 1;
-            static_speed = (accept_length + bonus) / C[max_accept_length]
-            dynamic_speed = (exit_length + bonus) / C[exit_length]
-            speed_gain.append(dynamic_speed - static_speed)
+        speed_gain = calc_speed_gain(lengths, max_accept_length, C)
         data.append(speed_gain)
 
     fig, ax = plt.subplots(2, 5, figsize=(12, 6))
     for i, speed_gain in enumerate(data):
         threshold = thresholds[i]
-        mean_speed_gain = sum(speed_gain) / (len(speed_gain) + 1e-5)
+        avg_speed_gain = sum(speed_gain) / (len(speed_gain) + 1e-5)
         ax[i // 5, i % 5].hist(speed_gain, bins=max_accept_length)
         ax[i // 5, i % 5].set_title(f"threshold={threshold:.2f}")
-        ax[i // 5, i % 5].set_xlabel(f"Speed Gain (avg={mean_speed_gain:.2f})")
+        ax[i // 5, i % 5].set_xlabel(f"Speed Gain (avg={avg_speed_gain:.2f})")
 
     plt.tight_layout()
     plt.savefig(f'{json_file}_optimal_A{A:.2f}_B{B:.2f}.png')
