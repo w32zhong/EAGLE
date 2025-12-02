@@ -5,6 +5,11 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 from colorama import Fore, Back, Style
 
+H100_chain_A = 1.214
+H100_chain_B = 22.56
+H100_tree_A = 1.365
+H100_tree_B = 23.618
+
 
 def parse_data_lengths(j):
     exit_range, samples, = [], None
@@ -87,7 +92,7 @@ def calc_speed_gain(lengths, max_accept_length, C, bonus=1, ideal=False):
     return speed_gain
 
 
-def probs(json_file='pondering_stats.json', threshold=0.9, A=1.365, B=23.618,
+def probs(json_file='pondering_stats.json', threshold=0.9, A=H100_tree_A, B=H100_tree_B,
           abort_on_first_exit=False, ideal=False):
     with open(json_file) as fh:
         j = json.load(fh)
@@ -111,12 +116,12 @@ def probs(json_file='pondering_stats.json', threshold=0.9, A=1.365, B=23.618,
     ax[1].set_xlabel("Exit")
     ax[1].legend()
 
-    fig.suptitle(f'Model Predicted Probs (threshold={threshold}, speed_gain={avg_speed_gain:.2f})')
+    fig.suptitle(f'Model Predicted Probs (threshold={threshold}, speed_gain={avg_speed_gain:.3f})')
     plt.tight_layout()
     plt.savefig(f'{json_file}_probs_threshold{threshold}.png')
 
 
-def optimal(json_file='pondering_stats.json', A=1.365, B=23.618):
+def optimal(json_file='pondering_stats.json', A=H100_tree_A, B=H100_tree_B):
     with open(json_file) as fh:
         j = json.load(fh)
     exit_range, max_accept_length = parse_data_lengths(j)
@@ -135,10 +140,10 @@ def optimal(json_file='pondering_stats.json', A=1.365, B=23.618):
         avg_speed_gain = sum(speed_gain) / (len(speed_gain) + 1e-5)
         ax[i // 5, i % 5].hist(speed_gain, bins=max_accept_length)
         ax[i // 5, i % 5].set_title(f"threshold={threshold:.2f}")
-        ax[i // 5, i % 5].set_xlabel(f"Speed Gain (avg={avg_speed_gain:.2f})")
+        ax[i // 5, i % 5].set_xlabel(f"Speed Gain (avg={avg_speed_gain:.3f})")
 
     plt.tight_layout()
-    plt.savefig(f'{json_file}_optimal_A{A:.2f}_B{B:.2f}.png')
+    plt.savefig(f'{json_file}_optimal_A{A:.3f}_B{B:.3f}.png')
 
 
 def costs(json_file='pondering_stats.json'):
@@ -163,14 +168,14 @@ def costs(json_file='pondering_stats.json'):
     A, B = np.polyfit(X, Y, 1) # degree 1 → linear iterpolation
     interpolated = [(A * x + B).item() for x in range(len(C_mean))]
     print('interpolated', interpolated)
-    print('A,B', round(A, 2), round(B, 2))
+    print('A,B', round(A, 3), round(B, 3))
 
     fig, ax = plt.subplots(1, 1, figsize=(8, 6))
     ax.scatter(X, Y, color='red')
     ax.plot(X, interpolated)
     ax.set_ylabel("Cost")
     ax.set_xlabel("Exit Length")
-    fig.suptitle(f'Model Cost Interpolation (A={A:.2f}, B={B:.2f})')
+    fig.suptitle(f'Model Cost Interpolation (A={A:.3f}, B={B:.3f})')
     plt.tight_layout()
     plt.savefig(f'{json_file}_costs.png')
 
