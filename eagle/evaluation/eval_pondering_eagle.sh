@@ -23,37 +23,34 @@ run() {
 
 for model_and_train_ttt in \
   "w32zhong/resilient-paper__annealing100_ep5_step_1465K" \
-  "w32zhong/misty-cherry__annealing10_ep5_step_1465K" \
   ; do
 
-  #for tree in 5,1,7   8,1,10  10,1,12  12,1,14  15,1,17  20,1,22  \
-  #            5,5,25  8,5,40  10,5,50  12,5,60  15,5,75  20,5,100 \
-  #            5,10,50  8,10,80  10,10,90  12,10,100 \
-  #  ; do
+  for tree in \
+     6,10,50   6,10,60   6,10,70   6,10,80   6,10,90   6,10,100 \
+     7,10,50   7,10,60   7,10,70   7,10,80   7,10,90   7,10,100 \
+     8,10,50   8,10,60   8,10,70   8,10,80   8,10,90   8,10,100 \
+     9,10,50   9,10,60   9,10,70   9,10,80   9,10,90   9,10,100 \
+    10,10,50  10,10,60  10,10,70  10,10,80  10,10,90  10,10,100 \
+    11,10,50  11,10,60  11,10,70  11,10,80  11,10,90  11,10,100 \
+    12,10,50  12,10,60  12,10,70  12,10,80  12,10,90  12,10,100 \
+    ; do
 
-  for tree in 15,10,80 15,1,17; do
     IFS=',' read -r model train_ttt <<< $model_and_train_ttt
     IFS=',' read -r depth top_k total_k <<< $tree
 
-    #if [[ "$model" =~ "baseline" ]]; then
-    #  options="disabled"
-    #elif [ $top_k -eq 1 ]; then
-    #  #options="disabled random joint greedy"
-    #  options="disabled greedy"
-    #else
-    #  #options="disabled random greedy_max greedy_min greedy_avg"
-    #  options="disabled greedy_min greedy_avg"
-    #fi
+    #options="stats_verbose_0_avg stats_verbose_0_max stats_verbose_0_min stats_cost_0"
+    options="disabled0 greedy0_avg"
 
-    options="stats_verbose_0_avg stats_cost_0"
+    for pondering_options in $options; do
+      for pondering_threshold in 0.8 0.9 0.95 0.99 1.0; do
 
-    for pondering_threshold in 0.8; do
-      for pondering_options in $options; do
-        # (optional) skip extrapolation
-        #if [ $depth -gt $train_ttt ]; then continue; fi
+        if [[ "$pondering_options" =~ "disabled" ]]; then
+          session=$(experiment_sanitize "${model}_${tree}_baseline_${pondering_options}")
+        else
+          session=$(experiment_sanitize "${model}_${tree}_${pondering_threshold}_${pondering_options}")
+        fi
 
         # any existing log? if yes, evaluate the speeds and skip.
-        session=$(experiment_sanitize "${model}_${tree}_${pondering_threshold}_${pondering_options}")
         if [ -e mt_bench/$session-*.jsonl ]; then
           python eagle/evaluation/eval_speed.py mt_bench/$session-*.jsonl
           continue
