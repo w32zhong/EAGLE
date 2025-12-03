@@ -11,7 +11,9 @@ H100_tree_A = 1.365
 H100_tree_B = 23.618
 
 
-def parse_data_lengths(j):
+def parse(json_file):
+    with open(json_file) as fh:
+        j = json.load(fh)
     exit_range, samples, = [], None
     keys = j.keys()
     for i in range(-1, len(keys)):
@@ -24,13 +26,14 @@ def parse_data_lengths(j):
                 samples = len(j[key])
         else:
             break
-    max_accept_length = max(exit_range) + 1
-    if max_accept_length != max(j['a']):
+    avg_accept_length = round(sum(j['a']) / len(j['a']), 3)
+    max_accept_length = max(exit_range) + 1 if exit_range else None
+    if max_accept_length and max_accept_length != max(j['a']):
         print(Fore.YELLOW, """
               Warning: max_accept_length != max recorded accept_length!
               This may indicate the model is not performing as expected.
               """, Style.RESET_ALL)
-    return exit_range, max_accept_length
+    return exit_range, max_accept_length, avg_accept_length
 
 
 def exit_condition(step, prob, threshold):
@@ -94,9 +97,7 @@ def calc_speed_gain(lengths, max_accept_length, C, bonus=1, ideal=False):
 
 def probs(json_file='pondering_stats.json', threshold=0.9, A=H100_tree_A, B=H100_tree_B,
           abort_on_first_exit=False, ideal=False):
-    with open(json_file) as fh:
-        j = json.load(fh)
-    exit_range, max_accept_length = parse_data_lengths(j)
+    exit_range, max_accept_length, _ = parse(json_file)
     lengths, true_pos, false_pos, true_neg, false_neg = calc_stats(j, exit_range, threshold,
                                                           abort_on_first_exit=abort_on_first_exit)
     C = [A * (i+1) + B for i in exit_range]
@@ -122,9 +123,7 @@ def probs(json_file='pondering_stats.json', threshold=0.9, A=H100_tree_A, B=H100
 
 
 def optimal(json_file='pondering_stats.json', A=H100_tree_A, B=H100_tree_B):
-    with open(json_file) as fh:
-        j = json.load(fh)
-    exit_range, max_accept_length = parse_data_lengths(j)
+    exit_range, max_accept_length, _ = parse(json_file)
     C = [A * (i+1) + B for i in exit_range]
 
     data = []
@@ -181,4 +180,4 @@ def costs(json_file='pondering_stats.json'):
 
 
 if __name__ == '__main__':
-    fire.Fire(dict(probs=probs, optimal=optimal, costs=costs))
+    fire.Fire(dict(parse=parse, probs=probs, optimal=optimal, costs=costs))
