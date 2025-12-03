@@ -306,8 +306,10 @@ def get_model_answers(
             }
             fout.write(json.dumps(ans_json) + "\n")
 
-    if model.ea_layer.pondering_options.startswith('stats'):
+    if ('verbose' in model.ea_layer.pondering_options
+        or model.ea_layer.pondering_options.startswith('stats')):
         print(model.ea_layer.pondering_stats.report(ignore_nan=True))
+    if 'stats' in model.ea_layer.pondering_options:
         with open(f'pondering_stats__{model_id}.json', 'w') as fh:
             json.dump(model.ea_layer.pondering_stats._hist, fh)
 

@@ -284,8 +284,10 @@ class EaModel(nn.Module):
             best_candidate, accept_length, sample_p = evaluate_posterior(
                 logits, candidates, logits_processor
             )
-            if self.ea_layer.pondering_options.startswith('stats'):
+            if ('verbose' in self.ea_layer.pondering_options
+                or model.ea_layer.pondering_options.startswith('stats')):
                 self.ea_layer.pondering_stats._hist[f'a'].append(accept_length.item())
+
             # Adjusting the input sequence, draft model forward
             input_ids, draft_tokens, retrieve_indices, tree_mask, tree_position_ids, new_token, hidden_state, sample_token = update_inference_inputs(
                 input_ids,
