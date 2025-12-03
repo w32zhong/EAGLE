@@ -1,0 +1,420 @@
+resilient-paper_annealing100	6_10_50	-1	baseline	139.171		
+resilient-paper_annealing100	6_10_50	-1	baseline	139.171		
+resilient-paper_annealing100	6_10_50	-1	baseline	139.171		
+resilient-paper_annealing100	6_10_50	-1	baseline	139.171		
+resilient-paper_annealing100	6_10_50	-1	baseline	139.171		
+resilient-paper_annealing100	6_10_50	0.8	greedy0_avg	156.207		
+resilient-paper_annealing100	6_10_50	0.9	greedy0_avg	153.851		
+resilient-paper_annealing100	6_10_50	0.95	greedy0_avg	159.971		
+resilient-paper_annealing100	6_10_50	0.99	greedy0_avg	151.804		
+resilient-paper_annealing100	6_10_50	1	greedy0_avg	158.514	139.17	159.97
+resilient-paper_annealing100	6_10_60	-1	baseline	158.027		
+resilient-paper_annealing100	6_10_60	-1	baseline	158.027		
+resilient-paper_annealing100	6_10_60	-1	baseline	158.027		
+resilient-paper_annealing100	6_10_60	-1	baseline	158.027		
+resilient-paper_annealing100	6_10_60	-1	baseline	158.027		
+resilient-paper_annealing100	6_10_60	0.8	greedy0_avg	160.621		
+resilient-paper_annealing100	6_10_60	0.9	greedy0_avg	157.504		
+resilient-paper_annealing100	6_10_60	0.95	greedy0_avg	159.439		
+resilient-paper_annealing100	6_10_60	0.99	greedy0_avg	152.01		
+resilient-paper_annealing100	6_10_60	1	greedy0_avg	159.66	158.03	160.62
+resilient-paper_annealing100	6_10_70	-1	baseline	166.56		
+resilient-paper_annealing100	6_10_70	-1	baseline	166.56		
+resilient-paper_annealing100	6_10_70	-1	baseline	166.56		
+resilient-paper_annealing100	6_10_70	-1	baseline	166.56		
+resilient-paper_annealing100	6_10_70	-1	baseline	166.56		
+resilient-paper_annealing100	6_10_70	0.8	greedy0_avg	159.646		
+resilient-paper_annealing100	6_10_70	0.9	greedy0_avg	156.613		
+resilient-paper_annealing100	6_10_70	0.95	greedy0_avg	157.627		
+resilient-paper_annealing100	6_10_70	0.99	greedy0_avg	160.674		
+resilient-paper_annealing100	6_10_70	1	greedy0_avg	159.588	166.56	160.67
+resilient-paper_annealing100	6_10_80	-1	baseline	148.488		
+resilient-paper_annealing100	6_10_80	-1	baseline	148.488		
+resilient-paper_annealing100	6_10_80	-1	baseline	148.488		
+resilient-paper_annealing100	6_10_80	-1	baseline	148.488		
+resilient-paper_annealing100	6_10_80	-1	baseline	148.488		
+resilient-paper_annealing100	6_10_80	0.8	greedy0_avg	164.071		
+resilient-paper_annealing100	6_10_80	0.9	greedy0_avg	163.263		
+resilient-paper_annealing100	6_10_80	0.95	greedy0_avg	161.873		
+resilient-paper_annealing100	6_10_80	0.99	greedy0_avg	169.217		
+resilient-paper_annealing100	6_10_80	1	greedy0_avg	166.093	148.49	169.22
+resilient-paper_annealing100	6_10_90	-1	baseline	163.689		
+resilient-paper_annealing100	6_10_90	-1	baseline	163.689		
+resilient-paper_annealing100	6_10_90	-1	baseline	163.689		
+resilient-paper_annealing100	6_10_90	-1	baseline	163.689		
+resilient-paper_annealing100	6_10_90	-1	baseline	163.689		
+resilient-paper_annealing100	6_10_90	0.8	greedy0_avg	161.609		
+resilient-paper_annealing100	6_10_90	0.9	greedy0_avg	164.547		
+resilient-paper_annealing100	6_10_90	0.95	greedy0_avg	143.45		
+resilient-paper_annealing100	6_10_90	0.99	greedy0_avg	166.552		
+resilient-paper_annealing100	6_10_90	1	greedy0_avg	154.876	163.69	166.55
+resilient-paper_annealing100	6_10_100	-1	baseline	162.447		
+resilient-paper_annealing100	6_10_100	-1	baseline	162.447		
+resilient-paper_annealing100	6_10_100	-1	baseline	162.447		
+resilient-paper_annealing100	6_10_100	-1	baseline	162.447		
+resilient-paper_annealing100	6_10_100	-1	baseline	162.447		
+resilient-paper_annealing100	6_10_100	0.8	greedy0_avg	164.841		
+resilient-paper_annealing100	6_10_100	0.9	greedy0_avg	165.513		
+resilient-paper_annealing100	6_10_100	0.95	greedy0_avg	146.78		
+resilient-paper_annealing100	6_10_100	0.99	greedy0_avg	167.118		
+resilient-paper_annealing100	6_10_100	1	greedy0_avg	155.827	162.45	167.12
+resilient-paper_annealing100	7_10_50	-1	baseline	154.355		
+resilient-paper_annealing100	7_10_50	-1	baseline	154.355		
+resilient-paper_annealing100	7_10_50	-1	baseline	154.355		
+resilient-paper_annealing100	7_10_50	-1	baseline	154.355		
+resilient-paper_annealing100	7_10_50	-1	baseline	154.355		
+resilient-paper_annealing100	7_10_50	0.8	greedy0_avg	159.737		
+resilient-paper_annealing100	7_10_50	0.9	greedy0_avg	155.7		
+resilient-paper_annealing100	7_10_50	0.95	greedy0_avg	159.457		
+resilient-paper_annealing100	7_10_50	0.99	greedy0_avg	160.075		
+resilient-paper_annealing100	7_10_50	1	greedy0_avg	153.866	154.36	160.08
+resilient-paper_annealing100	7_10_60	-1	baseline	141.555		
+resilient-paper_annealing100	7_10_60	-1	baseline	141.555		
+resilient-paper_annealing100	7_10_60	-1	baseline	141.555		
+resilient-paper_annealing100	7_10_60	-1	baseline	141.555		
+resilient-paper_annealing100	7_10_60	-1	baseline	141.555		
+resilient-paper_annealing100	7_10_60	0.8	greedy0_avg	162.253		
+resilient-paper_annealing100	7_10_60	0.9	greedy0_avg	161.424		
+resilient-paper_annealing100	7_10_60	0.95	greedy0_avg	161.113		
+resilient-paper_annealing100	7_10_60	0.99	greedy0_avg	163.992		
+resilient-paper_annealing100	7_10_60	1	greedy0_avg	137.445	141.56	163.99
+resilient-paper_annealing100	7_10_70	-1	baseline	145.394		
+resilient-paper_annealing100	7_10_70	-1	baseline	145.394		
+resilient-paper_annealing100	7_10_70	-1	baseline	145.394		
+resilient-paper_annealing100	7_10_70	-1	baseline	145.394		
+resilient-paper_annealing100	7_10_70	-1	baseline	145.394		
+resilient-paper_annealing100	7_10_70	0.8	greedy0_avg	163.076		
+resilient-paper_annealing100	7_10_70	0.9	greedy0_avg	163.283		
+resilient-paper_annealing100	7_10_70	0.95	greedy0_avg	162.227		
+resilient-paper_annealing100	7_10_70	0.99	greedy0_avg	167.018		
+resilient-paper_annealing100	7_10_70	1	greedy0_avg	157.209	145.39	167.02
+resilient-paper_annealing100	7_10_80	-1	baseline	163.623		
+resilient-paper_annealing100	7_10_80	-1	baseline	163.623		
+resilient-paper_annealing100	7_10_80	-1	baseline	163.623		
+resilient-paper_annealing100	7_10_80	-1	baseline	163.623		
+resilient-paper_annealing100	7_10_80	-1	baseline	163.623		
+resilient-paper_annealing100	7_10_80	0.8	greedy0_avg	167.379		
+resilient-paper_annealing100	7_10_80	0.9	greedy0_avg	163.93		
+resilient-paper_annealing100	7_10_80	0.95	greedy0_avg	163.78		
+resilient-paper_annealing100	7_10_80	0.99	greedy0_avg	165.397		
+resilient-paper_annealing100	7_10_80	1	greedy0_avg	167.447	163.62	167.45
+resilient-paper_annealing100	7_10_90	-1	baseline	142.306		
+resilient-paper_annealing100	7_10_90	-1	baseline	142.306		
+resilient-paper_annealing100	7_10_90	-1	baseline	142.306		
+resilient-paper_annealing100	7_10_90	-1	baseline	142.306		
+resilient-paper_annealing100	7_10_90	-1	baseline	142.306		
+resilient-paper_annealing100	7_10_90	0.8	greedy0_avg	166.148		
+resilient-paper_annealing100	7_10_90	0.9	greedy0_avg	167.16		
+resilient-paper_annealing100	7_10_90	0.95	greedy0_avg	162.791		
+resilient-paper_annealing100	7_10_90	0.99	greedy0_avg	169.219		
+resilient-paper_annealing100	7_10_90	1	greedy0_avg	168.628	142.31	169.22
+resilient-paper_annealing100	7_10_100	-1	baseline	164.05		
+resilient-paper_annealing100	7_10_100	-1	baseline	164.05		
+resilient-paper_annealing100	7_10_100	-1	baseline	164.05		
+resilient-paper_annealing100	7_10_100	-1	baseline	164.05		
+resilient-paper_annealing100	7_10_100	-1	baseline	164.05		
+resilient-paper_annealing100	7_10_100	0.8	greedy0_avg	165.399		
+resilient-paper_annealing100	7_10_100	0.9	greedy0_avg	163.83		
+resilient-paper_annealing100	7_10_100	0.95	greedy0_avg	165.356		
+resilient-paper_annealing100	7_10_100	0.99	greedy0_avg	164.451		
+resilient-paper_annealing100	7_10_100	1	greedy0_avg	166.671	164.05	166.67
+resilient-paper_annealing100	8_10_50	-1	baseline	149.323		
+resilient-paper_annealing100	8_10_50	-1	baseline	149.323		
+resilient-paper_annealing100	8_10_50	-1	baseline	149.323		
+resilient-paper_annealing100	8_10_50	-1	baseline	149.323		
+resilient-paper_annealing100	8_10_50	-1	baseline	149.323		
+resilient-paper_annealing100	8_10_50	0.8	greedy0_avg	161.04		
+resilient-paper_annealing100	8_10_50	0.9	greedy0_avg	154.962		
+resilient-paper_annealing100	8_10_50	0.95	greedy0_avg	156.244		
+resilient-paper_annealing100	8_10_50	0.99	greedy0_avg	137.757		
+resilient-paper_annealing100	8_10_50	1	greedy0_avg	151.787	149.32	161.04
+resilient-paper_annealing100	8_10_60	-1	baseline	156.223		
+resilient-paper_annealing100	8_10_60	-1	baseline	156.223		
+resilient-paper_annealing100	8_10_60	-1	baseline	156.223		
+resilient-paper_annealing100	8_10_60	-1	baseline	156.223		
+resilient-paper_annealing100	8_10_60	-1	baseline	156.223		
+resilient-paper_annealing100	8_10_60	0.8	greedy0_avg	163.371		
+resilient-paper_annealing100	8_10_60	0.9	greedy0_avg	163.202		
+resilient-paper_annealing100	8_10_60	0.95	greedy0_avg	163.928		
+resilient-paper_annealing100	8_10_60	0.99	greedy0_avg	165.701		
+resilient-paper_annealing100	8_10_60	1	greedy0_avg	140.54	156.22	165.70
+resilient-paper_annealing100	8_10_70	-1	baseline	158.196		
+resilient-paper_annealing100	8_10_70	-1	baseline	158.196		
+resilient-paper_annealing100	8_10_70	-1	baseline	158.196		
+resilient-paper_annealing100	8_10_70	-1	baseline	158.196		
+resilient-paper_annealing100	8_10_70	-1	baseline	158.196		
+resilient-paper_annealing100	8_10_70	0.8	greedy0_avg	163.396		
+resilient-paper_annealing100	8_10_70	0.9	greedy0_avg	165.387		
+resilient-paper_annealing100	8_10_70	0.95	greedy0_avg	162.969		
+resilient-paper_annealing100	8_10_70	0.99	greedy0_avg	163.931		
+resilient-paper_annealing100	8_10_70	1	greedy0_avg	155.123	158.20	165.39
+resilient-paper_annealing100	8_10_80	-1	baseline	157.605		
+resilient-paper_annealing100	8_10_80	-1	baseline	157.605		
+resilient-paper_annealing100	8_10_80	-1	baseline	157.605		
+resilient-paper_annealing100	8_10_80	-1	baseline	157.605		
+resilient-paper_annealing100	8_10_80	-1	baseline	157.605		
+resilient-paper_annealing100	8_10_80	0.8	greedy0_avg	166.547		
+resilient-paper_annealing100	8_10_80	0.9	greedy0_avg	166.37		
+resilient-paper_annealing100	8_10_80	0.95	greedy0_avg	166.017		
+resilient-paper_annealing100	8_10_80	0.99	greedy0_avg	142.92		
+resilient-paper_annealing100	8_10_80	1	greedy0_avg	167.88	157.61	167.88
+resilient-paper_annealing100	8_10_90	-1	baseline	162.632		
+resilient-paper_annealing100	8_10_90	-1	baseline	162.632		
+resilient-paper_annealing100	8_10_90	-1	baseline	162.632		
+resilient-paper_annealing100	8_10_90	-1	baseline	162.632		
+resilient-paper_annealing100	8_10_90	-1	baseline	162.632		
+resilient-paper_annealing100	8_10_90	0.8	greedy0_avg	167.34		
+resilient-paper_annealing100	8_10_90	0.9	greedy0_avg	169.175		
+resilient-paper_annealing100	8_10_90	0.95	greedy0_avg	166.292		
+resilient-paper_annealing100	8_10_90	0.99	greedy0_avg	160.154		
+resilient-paper_annealing100	8_10_90	1	greedy0_avg	166.305	162.63	169.18
+resilient-paper_annealing100	8_10_100	-1	baseline	161.587		
+resilient-paper_annealing100	8_10_100	-1	baseline	161.587		
+resilient-paper_annealing100	8_10_100	-1	baseline	161.587		
+resilient-paper_annealing100	8_10_100	-1	baseline	161.587		
+resilient-paper_annealing100	8_10_100	-1	baseline	161.587		
+resilient-paper_annealing100	8_10_100	0.8	greedy0_avg	166.635		
+resilient-paper_annealing100	8_10_100	0.9	greedy0_avg	163.313		
+resilient-paper_annealing100	8_10_100	0.95	greedy0_avg	166.903		
+resilient-paper_annealing100	8_10_100	0.99	greedy0_avg	166.69		
+resilient-paper_annealing100	8_10_100	1	greedy0_avg	166.596	161.59	166.90
+resilient-paper_annealing100	9_10_50	-1	baseline	148.35		
+resilient-paper_annealing100	9_10_50	-1	baseline	148.35		
+resilient-paper_annealing100	9_10_50	-1	baseline	148.35		
+resilient-paper_annealing100	9_10_50	-1	baseline	148.35		
+resilient-paper_annealing100	9_10_50	-1	baseline	148.35		
+resilient-paper_annealing100	9_10_50	0.8	greedy0_avg	159.746		
+resilient-paper_annealing100	9_10_50	0.9	greedy0_avg	158.013		
+resilient-paper_annealing100	9_10_50	0.95	greedy0_avg	158.061		
+resilient-paper_annealing100	9_10_50	0.99	greedy0_avg	138.7		
+resilient-paper_annealing100	9_10_50	1	greedy0_avg	160.117	148.35	160.12
+resilient-paper_annealing100	9_10_60	-1	baseline	152.792		
+resilient-paper_annealing100	9_10_60	-1	baseline	152.792		
+resilient-paper_annealing100	9_10_60	-1	baseline	152.792		
+resilient-paper_annealing100	9_10_60	-1	baseline	152.792		
+resilient-paper_annealing100	9_10_60	-1	baseline	152.792		
+resilient-paper_annealing100	9_10_60	0.8	greedy0_avg	164.434		
+resilient-paper_annealing100	9_10_60	0.9	greedy0_avg	161.884		
+resilient-paper_annealing100	9_10_60	0.95	greedy0_avg	159.578		
+resilient-paper_annealing100	9_10_60	0.99	greedy0_avg	155.435		
+resilient-paper_annealing100	9_10_60	1	greedy0_avg	162.25	152.79	164.43
+resilient-paper_annealing100	9_10_70	-1	baseline	155.625		
+resilient-paper_annealing100	9_10_70	-1	baseline	155.625		
+resilient-paper_annealing100	9_10_70	-1	baseline	155.625		
+resilient-paper_annealing100	9_10_70	-1	baseline	155.625		
+resilient-paper_annealing100	9_10_70	-1	baseline	155.625		
+resilient-paper_annealing100	9_10_70	0.8	greedy0_avg	164.352		
+resilient-paper_annealing100	9_10_70	0.9	greedy0_avg	161.857		
+resilient-paper_annealing100	9_10_70	0.95	greedy0_avg	164.531		
+resilient-paper_annealing100	9_10_70	0.99	greedy0_avg	155.086		
+resilient-paper_annealing100	9_10_70	1	greedy0_avg	165.778	155.63	165.78
+resilient-paper_annealing100	9_10_80	-1	baseline	155.743		
+resilient-paper_annealing100	9_10_80	-1	baseline	155.743		
+resilient-paper_annealing100	9_10_80	-1	baseline	155.743		
+resilient-paper_annealing100	9_10_80	-1	baseline	155.743		
+resilient-paper_annealing100	9_10_80	-1	baseline	155.743		
+resilient-paper_annealing100	9_10_80	0.8	greedy0_avg	168.465		
+resilient-paper_annealing100	9_10_80	0.9	greedy0_avg	165.5		
+resilient-paper_annealing100	9_10_80	0.95	greedy0_avg	164.834		
+resilient-paper_annealing100	9_10_80	0.99	greedy0_avg	159.829		
+resilient-paper_annealing100	9_10_80	1	greedy0_avg	168.862	155.74	168.86
+resilient-paper_annealing100	9_10_90	-1	baseline	154.464		
+resilient-paper_annealing100	9_10_90	-1	baseline	154.464		
+resilient-paper_annealing100	9_10_90	-1	baseline	154.464		
+resilient-paper_annealing100	9_10_90	-1	baseline	154.464		
+resilient-paper_annealing100	9_10_90	-1	baseline	154.464		
+resilient-paper_annealing100	9_10_90	0.8	greedy0_avg	163.747		
+resilient-paper_annealing100	9_10_90	0.9	greedy0_avg	163.677		
+resilient-paper_annealing100	9_10_90	0.95	greedy0_avg	162.927		
+resilient-paper_annealing100	9_10_90	0.99	greedy0_avg	166.112		
+resilient-paper_annealing100	9_10_90	1	greedy0_avg	158.261	154.46	166.11
+resilient-paper_annealing100	9_10_100	-1	baseline	154.039		
+resilient-paper_annealing100	9_10_100	-1	baseline	154.039		
+resilient-paper_annealing100	9_10_100	-1	baseline	154.039		
+resilient-paper_annealing100	9_10_100	-1	baseline	154.039		
+resilient-paper_annealing100	9_10_100	-1	baseline	154.039		
+resilient-paper_annealing100	9_10_100	0.8	greedy0_avg	167.542		
+resilient-paper_annealing100	9_10_100	0.9	greedy0_avg	162.688		
+resilient-paper_annealing100	9_10_100	0.95	greedy0_avg	153.046		
+resilient-paper_annealing100	9_10_100	0.99	greedy0_avg	165.298		
+resilient-paper_annealing100	9_10_100	1	greedy0_avg	161.183	154.04	167.54
+resilient-paper_annealing100	10_10_50	-1	baseline	146.758		
+resilient-paper_annealing100	10_10_50	-1	baseline	146.758		
+resilient-paper_annealing100	10_10_50	-1	baseline	146.758		
+resilient-paper_annealing100	10_10_50	-1	baseline	146.758		
+resilient-paper_annealing100	10_10_50	-1	baseline	146.758		
+resilient-paper_annealing100	10_10_50	0.8	greedy0_avg	160.227		
+resilient-paper_annealing100	10_10_50	0.9	greedy0_avg	157.346		
+resilient-paper_annealing100	10_10_50	0.95	greedy0_avg	142.057		
+resilient-paper_annealing100	10_10_50	0.99	greedy0_avg	162.275		
+resilient-paper_annealing100	10_10_50	1	greedy0_avg	153.541	146.76	162.28
+resilient-paper_annealing100	10_10_60	-1	baseline	148.208		
+resilient-paper_annealing100	10_10_60	-1	baseline	148.208		
+resilient-paper_annealing100	10_10_60	-1	baseline	148.208		
+resilient-paper_annealing100	10_10_60	-1	baseline	148.208		
+resilient-paper_annealing100	10_10_60	-1	baseline	148.208		
+resilient-paper_annealing100	10_10_60	0.8	greedy0_avg	162.057		
+resilient-paper_annealing100	10_10_60	0.9	greedy0_avg	160.721		
+resilient-paper_annealing100	10_10_60	0.95	greedy0_avg	160.432		
+resilient-paper_annealing100	10_10_60	0.99	greedy0_avg	165.781		
+resilient-paper_annealing100	10_10_60	1	greedy0_avg	153.614	148.21	165.78
+resilient-paper_annealing100	10_10_70	-1	baseline	148.761		
+resilient-paper_annealing100	10_10_70	-1	baseline	148.761		
+resilient-paper_annealing100	10_10_70	-1	baseline	148.761		
+resilient-paper_annealing100	10_10_70	-1	baseline	148.761		
+resilient-paper_annealing100	10_10_70	-1	baseline	148.761		
+resilient-paper_annealing100	10_10_70	0.8	greedy0_avg	163.915		
+resilient-paper_annealing100	10_10_70	0.9	greedy0_avg	161.827		
+resilient-paper_annealing100	10_10_70	0.95	greedy0_avg	160.826		
+resilient-paper_annealing100	10_10_70	0.99	greedy0_avg	167.465		
+resilient-paper_annealing100	10_10_70	1	greedy0_avg	158.758	148.76	167.47
+resilient-paper_annealing100	10_10_80	-1	baseline	136.358		
+resilient-paper_annealing100	10_10_80	-1	baseline	136.358		
+resilient-paper_annealing100	10_10_80	-1	baseline	136.358		
+resilient-paper_annealing100	10_10_80	-1	baseline	136.358		
+resilient-paper_annealing100	10_10_80	-1	baseline	136.358		
+resilient-paper_annealing100	10_10_80	0.8	greedy0_avg	167.193		
+resilient-paper_annealing100	10_10_80	0.9	greedy0_avg	166.193		
+resilient-paper_annealing100	10_10_80	0.95	greedy0_avg	149.699		
+resilient-paper_annealing100	10_10_80	0.99	greedy0_avg	167.863		
+resilient-paper_annealing100	10_10_80	1	greedy0_avg	169.782	136.36	169.78
+resilient-paper_annealing100	10_10_90	-1	baseline	149.888		
+resilient-paper_annealing100	10_10_90	-1	baseline	149.888		
+resilient-paper_annealing100	10_10_90	-1	baseline	149.888		
+resilient-paper_annealing100	10_10_90	-1	baseline	149.888		
+resilient-paper_annealing100	10_10_90	-1	baseline	149.888		
+resilient-paper_annealing100	10_10_90	0.8	greedy0_avg	169.537		
+resilient-paper_annealing100	10_10_90	0.9	greedy0_avg	165.39		
+resilient-paper_annealing100	10_10_90	0.95	greedy0_avg	163.949		
+resilient-paper_annealing100	10_10_90	0.99	greedy0_avg	169.31		
+resilient-paper_annealing100	10_10_90	1	greedy0_avg	167.438	149.89	169.54
+resilient-paper_annealing100	10_10_100	-1	baseline	152.348		
+resilient-paper_annealing100	10_10_100	-1	baseline	152.348		
+resilient-paper_annealing100	10_10_100	-1	baseline	152.348		
+resilient-paper_annealing100	10_10_100	-1	baseline	152.348		
+resilient-paper_annealing100	10_10_100	-1	baseline	152.348		
+resilient-paper_annealing100	10_10_100	0.8	greedy0_avg	162.84		
+resilient-paper_annealing100	10_10_100	0.9	greedy0_avg	163.547		
+resilient-paper_annealing100	10_10_100	0.95	greedy0_avg	163.997		
+resilient-paper_annealing100	10_10_100	0.99	greedy0_avg	169.57		
+resilient-paper_annealing100	10_10_100	1	greedy0_avg	157.698	152.35	169.57
+resilient-paper_annealing100	11_10_50	-1	baseline	143.18		
+resilient-paper_annealing100	11_10_50	-1	baseline	143.18		
+resilient-paper_annealing100	11_10_50	-1	baseline	143.18		
+resilient-paper_annealing100	11_10_50	-1	baseline	143.18		
+resilient-paper_annealing100	11_10_50	-1	baseline	143.18		
+resilient-paper_annealing100	11_10_50	0.8	greedy0_avg	158.437		
+resilient-paper_annealing100	11_10_50	0.9	greedy0_avg	156.565		
+resilient-paper_annealing100	11_10_50	0.95	greedy0_avg	159.119		
+resilient-paper_annealing100	11_10_50	0.99	greedy0_avg	153.008		
+resilient-paper_annealing100	11_10_50	1	greedy0_avg	152.488	143.18	159.12
+resilient-paper_annealing100	11_10_60	-1	baseline	141.305		
+resilient-paper_annealing100	11_10_60	-1	baseline	141.305		
+resilient-paper_annealing100	11_10_60	-1	baseline	141.305		
+resilient-paper_annealing100	11_10_60	-1	baseline	141.305		
+resilient-paper_annealing100	11_10_60	-1	baseline	141.305		
+resilient-paper_annealing100	11_10_60	0.8	greedy0_avg	163.91		
+resilient-paper_annealing100	11_10_60	0.9	greedy0_avg	160.286		
+resilient-paper_annealing100	11_10_60	0.95	greedy0_avg	161.429		
+resilient-paper_annealing100	11_10_60	0.99	greedy0_avg	142.057		
+resilient-paper_annealing100	11_10_60	1	greedy0_avg	154.263	141.31	163.91
+resilient-paper_annealing100	11_10_70	-1	baseline	144.397		
+resilient-paper_annealing100	11_10_70	-1	baseline	144.397		
+resilient-paper_annealing100	11_10_70	-1	baseline	144.397		
+resilient-paper_annealing100	11_10_70	-1	baseline	144.397		
+resilient-paper_annealing100	11_10_70	-1	baseline	144.397		
+resilient-paper_annealing100	11_10_70	0.8	greedy0_avg	167.31		
+resilient-paper_annealing100	11_10_70	0.9	greedy0_avg	164.307		
+resilient-paper_annealing100	11_10_70	0.95	greedy0_avg	145.479		
+resilient-paper_annealing100	11_10_70	0.99	greedy0_avg	166.715		
+resilient-paper_annealing100	11_10_70	1	greedy0_avg	162.153	144.40	167.31
+resilient-paper_annealing100	11_10_80	-1	baseline	146.21		
+resilient-paper_annealing100	11_10_80	-1	baseline	146.21		
+resilient-paper_annealing100	11_10_80	-1	baseline	146.21		
+resilient-paper_annealing100	11_10_80	-1	baseline	146.21		
+resilient-paper_annealing100	11_10_80	-1	baseline	146.21		
+resilient-paper_annealing100	11_10_80	0.8	greedy0_avg	167.85		
+resilient-paper_annealing100	11_10_80	0.9	greedy0_avg	164.104		
+resilient-paper_annealing100	11_10_80	0.95	greedy0_avg	164.169		
+resilient-paper_annealing100	11_10_80	0.99	greedy0_avg	166.494		
+resilient-paper_annealing100	11_10_80	1	greedy0_avg	160.739	146.21	167.85
+resilient-paper_annealing100	11_10_90	-1	baseline	146.008		
+resilient-paper_annealing100	11_10_90	-1	baseline	146.008		
+resilient-paper_annealing100	11_10_90	-1	baseline	146.008		
+resilient-paper_annealing100	11_10_90	-1	baseline	146.008		
+resilient-paper_annealing100	11_10_90	-1	baseline	146.008		
+resilient-paper_annealing100	11_10_90	0.8	greedy0_avg	162.784		
+resilient-paper_annealing100	11_10_90	0.9	greedy0_avg	166.801		
+resilient-paper_annealing100	11_10_90	0.95	greedy0_avg	168.033		
+resilient-paper_annealing100	11_10_90	0.99	greedy0_avg	169.165		
+resilient-paper_annealing100	11_10_90	1	greedy0_avg	143.815	146.01	169.17
+resilient-paper_annealing100	11_10_100	-1	baseline	132.302		
+resilient-paper_annealing100	11_10_100	-1	baseline	132.302		
+resilient-paper_annealing100	11_10_100	-1	baseline	132.302		
+resilient-paper_annealing100	11_10_100	-1	baseline	132.302		
+resilient-paper_annealing100	11_10_100	-1	baseline	132.302		
+resilient-paper_annealing100	11_10_100	0.8	greedy0_avg	168.225		
+resilient-paper_annealing100	11_10_100	0.9	greedy0_avg	164.59		
+resilient-paper_annealing100	11_10_100	0.95	greedy0_avg	163.659		
+resilient-paper_annealing100	11_10_100	0.99	greedy0_avg	164.676		
+resilient-paper_annealing100	11_10_100	1	greedy0_avg	159.214	132.30	168.23
+resilient-paper_annealing100	12_10_50	-1	baseline	137.723		
+resilient-paper_annealing100	12_10_50	-1	baseline	137.723		
+resilient-paper_annealing100	12_10_50	-1	baseline	137.723		
+resilient-paper_annealing100	12_10_50	-1	baseline	137.723		
+resilient-paper_annealing100	12_10_50	-1	baseline	137.723		
+resilient-paper_annealing100	12_10_50	0.8	greedy0_avg	160.141		
+resilient-paper_annealing100	12_10_50	0.9	greedy0_avg	161.003		
+resilient-paper_annealing100	12_10_50	0.95	greedy0_avg	154.935		
+resilient-paper_annealing100	12_10_50	0.99	greedy0_avg	158.065		
+resilient-paper_annealing100	12_10_50	1	greedy0_avg	134.507	137.72	161.00
+resilient-paper_annealing100	12_10_60	-1	baseline	137.322		
+resilient-paper_annealing100	12_10_60	-1	baseline	137.322		
+resilient-paper_annealing100	12_10_60	-1	baseline	137.322		
+resilient-paper_annealing100	12_10_60	-1	baseline	137.322		
+resilient-paper_annealing100	12_10_60	-1	baseline	137.322		
+resilient-paper_annealing100	12_10_60	0.8	greedy0_avg	158.768		
+resilient-paper_annealing100	12_10_60	0.9	greedy0_avg	160.071		
+resilient-paper_annealing100	12_10_60	0.95	greedy0_avg	162.007		
+resilient-paper_annealing100	12_10_60	0.99	greedy0_avg	165.72		
+resilient-paper_annealing100	12_10_60	1	greedy0_avg	155.75	137.32	165.72
+resilient-paper_annealing100	12_10_70	-1	baseline	137.808		
+resilient-paper_annealing100	12_10_70	-1	baseline	137.808		
+resilient-paper_annealing100	12_10_70	-1	baseline	137.808		
+resilient-paper_annealing100	12_10_70	-1	baseline	137.808		
+resilient-paper_annealing100	12_10_70	-1	baseline	137.808		
+resilient-paper_annealing100	12_10_70	0.8	greedy0_avg	163.859		
+resilient-paper_annealing100	12_10_70	0.9	greedy0_avg	161.304		
+resilient-paper_annealing100	12_10_70	0.95	greedy0_avg	161.031		
+resilient-paper_annealing100	12_10_70	0.99	greedy0_avg	167.24		
+resilient-paper_annealing100	12_10_70	1	greedy0_avg	155.274	137.81	167.24
+resilient-paper_annealing100	12_10_80	-1	baseline	140.922		
+resilient-paper_annealing100	12_10_80	-1	baseline	140.922		
+resilient-paper_annealing100	12_10_80	-1	baseline	140.922		
+resilient-paper_annealing100	12_10_80	-1	baseline	140.922		
+resilient-paper_annealing100	12_10_80	-1	baseline	140.922		
+resilient-paper_annealing100	12_10_80	0.8	greedy0_avg	164.12		
+resilient-paper_annealing100	12_10_80	0.9	greedy0_avg	162.996		
+resilient-paper_annealing100	12_10_80	0.95	greedy0_avg	164.65		
+resilient-paper_annealing100	12_10_80	0.99	greedy0_avg	170.367		
+resilient-paper_annealing100	12_10_80	1	greedy0_avg	142.022	140.92	170.37
+resilient-paper_annealing100	12_10_90	-1	baseline	143.169		
+resilient-paper_annealing100	12_10_90	-1	baseline	143.169		
+resilient-paper_annealing100	12_10_90	-1	baseline	143.169		
+resilient-paper_annealing100	12_10_90	-1	baseline	143.169		
+resilient-paper_annealing100	12_10_90	-1	baseline	143.169		
+resilient-paper_annealing100	12_10_90	0.8	greedy0_avg	157.171		
+resilient-paper_annealing100	12_10_90	0.9	greedy0_avg	165.549		
+resilient-paper_annealing100	12_10_90	0.95	greedy0_avg	164.064		
+resilient-paper_annealing100	12_10_90	0.99	greedy0_avg	160.18		
+resilient-paper_annealing100	12_10_90	1	greedy0_avg	140.887	143.17	165.55
+resilient-paper_annealing100	12_10_100	-1	baseline	138.843		
+resilient-paper_annealing100	12_10_100	-1	baseline	138.843		
+resilient-paper_annealing100	12_10_100	-1	baseline	138.843		
+resilient-paper_annealing100	12_10_100	-1	baseline	138.843		
+resilient-paper_annealing100	12_10_100	-1	baseline	138.843		
+resilient-paper_annealing100	12_10_100	0.8	greedy0_avg	165.75		
+resilient-paper_annealing100	12_10_100	0.9	greedy0_avg	162.232		
+resilient-paper_annealing100	12_10_100	0.95	greedy0_avg	160.84		
+resilient-paper_annealing100	12_10_100	0.99	greedy0_avg	155.457		
+resilient-paper_annealing100	12_10_100	1	greedy0_avg	167.266	138.84	167.27
