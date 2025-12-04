@@ -33,7 +33,7 @@ def parse(json_file):
               Warning: max_accept_length != max recorded accept_length!
               This may indicate the model is not performing as expected.
               """, Style.RESET_ALL)
-    return exit_range, max_accept_length, avg_accept_length
+    return j, exit_range, max_accept_length, avg_accept_length
 
 
 def exit_condition(step, prob, threshold):
@@ -97,7 +97,7 @@ def calc_speed_gain(lengths, max_accept_length, C, bonus=1, ideal=False):
 
 def probs(json_file='pondering_stats.json', threshold=0.9, A=H100_tree_A, B=H100_tree_B,
           abort_on_first_exit=False, ideal=False):
-    exit_range, max_accept_length, _ = parse(json_file)
+    j, exit_range, max_accept_length, _ = parse(json_file)
     lengths, true_pos, false_pos, true_neg, false_neg = calc_stats(j, exit_range, threshold,
                                                           abort_on_first_exit=abort_on_first_exit)
     C = [A * (i+1) + B for i in exit_range]
@@ -123,7 +123,7 @@ def probs(json_file='pondering_stats.json', threshold=0.9, A=H100_tree_A, B=H100
 
 
 def optimal(json_file='pondering_stats.json', A=H100_tree_A, B=H100_tree_B):
-    exit_range, max_accept_length, _ = parse(json_file)
+    j, exit_range, max_accept_length, _ = parse(json_file)
     C = [A * (i+1) + B for i in exit_range]
 
     data = []
