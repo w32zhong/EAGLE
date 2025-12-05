@@ -776,6 +776,9 @@ class Model(nn.Module):
         len_posi = input_ids.shape[1]
         self.reset()
 
+        torch.set_printoptions(precision=3, sci_mode=False)
+        breakpoint()
+
         # with Timer("draft many"):
         if hasattr(self, "stable_kv") and self.stable_kv is not None:
             kv_len = self.stable_kv[0][0].shape[2]
