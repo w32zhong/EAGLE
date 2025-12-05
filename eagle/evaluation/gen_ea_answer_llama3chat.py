@@ -241,7 +241,7 @@ def get_model_answers(
                 input_ids = tokenizer([prompt], add_special_tokens=False, ).input_ids
 
                 import pickle
-                with open('test_input.pkl', 'rb') as file:
+                with open('/home/test_input.pkl', 'rb') as file:
                     ddd = pickle.load(file)
                     inject_input_ids = ddd['input_ids'].tolist()
                     input_ids = [inject_input_ids[0][:191]]
