@@ -111,10 +111,9 @@ def get_model_answers(
         pondering_threshold=args.pondering_threshold,
         pondering_options=args.pondering_options,
         # extra kwargs:
-        torch_dtype=torch.float16,
-        low_cpu_mem_usage=True,
+        torch_dtype=torch.bfloat16,
         # load_in_8bit=True,
-        device_map="auto",
+        device_map="cuda",
         use_eagle3=args.use_eagle3,
     )
 
