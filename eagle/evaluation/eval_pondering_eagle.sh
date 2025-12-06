@@ -1,1 +1,3 @@
-python -m eagle.evaluation.gen_ea_answer_llama3chat --use_eagle3 --model-id test --max-new-token 2048 --base-model-path meta-llama/Meta-Llama-3.1-8B-Instruct --ea-model-path /workspace/mnt/SpecForge/outputs/PonderEagle_ttt8_ep2_tau5_5_100_layer2_datacombined/epoch_0 --depth 8 --top-k 1 --total-token 10 --pondering_threshold -1 --pondering_options stats_verbose_1ML_avg
+set -x
+python -m eagle.evaluation.gen_ea_answer_llama3chat --use_eagle3 --model-id test --max-new-token 2048 --base-model-path meta-llama/Meta-Llama-3.1-8B-Instruct --ea-model-path /workspace/mnt/SpecForge/outputs/PonderEagle_ttt8_ep2_tau5_5_100_layer2_datacombined/epoch_0 --depth 12 --top-k 10 --total-token 80 --pondering_threshold -1 --pondering_options stats_verbose_1ML_avg
+set +x

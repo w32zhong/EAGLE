@@ -1159,8 +1159,6 @@ class LlamaModel(LlamaPreTrainedModel):
                     None,
                 )
             else:
-                #torch.set_printoptions(precision=3, sci_mode=False)
-                #print(idx, hidden_states.sum(-1))
                 layer_outputs = decoder_layer(
                     hidden_states,
                     attention_mask=attention_mask,

@@ -44,6 +44,14 @@ except:
 from .timestats import TimeStats
 
 
+def cmp_tensor_w_another(tensor):
+    try:
+        another_tensor = torch.load('/tmp/debug_cmp_tensor_w_another.pt')
+        print('absdiff:', (tensor.float() - another_tensor.float()).abs().max() )
+    except Exception as e:
+        print(e)
+    torch.save(tensor, '/tmp/debug_cmp_tensor_w_another.pt')
+torch.set_printoptions(precision=2, sci_mode=False)
 
 
 # Copied from transformers.models.bart.modeling_bart._make_causal_mask
@@ -786,7 +794,6 @@ class Model(nn.Module):
         self.stable_kv = past_key_values
         last_hidden = out_hidden[:, -1]
 
-        #if True:
         if _ := self.early_exit(s, -1):
             draft_tokens = sample_token[None]
             retrieve_indices = torch.zeros(1, 1, dtype=torch.long)
@@ -826,6 +833,7 @@ class Model(nn.Module):
                 input_hidden, input_ids=input_ids, past_key_values=past_key_values,
                 position_ids=position_ids, use_cache=True
             )
+
             len_posi += 1
 
             # with Timer("sort1"):
