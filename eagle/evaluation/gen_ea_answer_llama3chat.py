@@ -113,7 +113,7 @@ def get_model_answers(
         # extra kwargs:
         torch_dtype=torch.bfloat16,
         # load_in_8bit=True,
-        device_map="cuda",
+        device_map="auto",
         use_eagle3=args.use_eagle3,
     )
 
