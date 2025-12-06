@@ -1016,8 +1016,8 @@ class LlamaModel(LlamaPreTrainedModel):
         if input_shape[-1] > 1:
             combined_attention_mask = _make_causal_mask(
                 input_shape,
-                # inputs_embeds.dtype,
-                torch.float32,  # [MODIFIED] force to cast to float32
+                inputs_embeds.dtype,
+                #torch.float32,  # [MODIFIED] force to cast to float32
                 device=inputs_embeds.device,
                 past_key_values_length=past_key_values_length,
             )
@@ -1159,6 +1159,8 @@ class LlamaModel(LlamaPreTrainedModel):
                     None,
                 )
             else:
+                #torch.set_printoptions(precision=3, sci_mode=False)
+                #print(idx, hidden_states.sum(-1))
                 layer_outputs = decoder_layer(
                     hidden_states,
                     attention_mask=attention_mask,
