@@ -488,6 +488,7 @@ class Model(nn.Module):
         self.pondering_threshold = pondering_threshold
         self.pondering_options = pondering_options
         self.pondering_stats = TimeStats(disable=False)
+        self.exit_at = random.randrange(depth + 1) - 1
 
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
         self.lm_head=nn.Linear(config.hidden_size,config.draft_vocab_size,bias=False)
@@ -738,9 +739,10 @@ class Model(nn.Module):
             exit_condition = (random.uniform(0, 1) >= self.pondering_threshold)
 
         elif self.pondering_options.startswith('stats_cost'):
-            exit_condition = (random.uniform(0, 1) >= self.pondering_threshold) or (i == self.depth)
+            exit_condition = (i == self.exit_at) or (i == self.depth)
             if exit_condition:
                 self.pondering_stats._hist[f'exit@'].append(i)
+                self.exit_at = random.randrange(self.depth + 1) - 1
 
         elif self.pondering_options.startswith('stats'):
             self.pondering_stats._hist[f'e{i}'].append(exit_i)

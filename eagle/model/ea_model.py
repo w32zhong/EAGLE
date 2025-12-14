@@ -285,7 +285,7 @@ class EaModel(nn.Module):
                 logits, candidates, logits_processor
             )
             if ('verbose' in self.ea_layer.pondering_options
-                or model.ea_layer.pondering_options.startswith('stats')):
+                or self.ea_layer.pondering_options.startswith('stats')):
                 self.ea_layer.pondering_stats._hist[f'a'].append(accept_length.item())
 
             # Adjusting the input sequence, draft model forward
