@@ -21,28 +21,24 @@ run() {
   experiment_session $session $SESSION_END
 }
 
-for model_and_train_ttt in \
-  "w32zhong/resilient-paper__annealing100_ep5_step_1465K" \
+for model in \
+  "w32zhong/wandering-energy__PonderEagle_ttt10_ep5_tau5_layer1_datacombined_C1.22_23.17_tf32False" \
+  "w32zhong/glowing-jazz__PonderEagle_ttt10_ep5_tau5_layer1_datacombined_C1.40_22.90_tf32False" \
+  "w32zhong/golden-valley__PonderEagle_ttt10_ep5_tau5_layer1_datacombined_C1.40_22.90_tf32True" \
+  "w32zhong/azure-wood__PonderEagle_ttt12_ep5_tau5_layer1_datacombined_C1.40_22.90_tf32False" \
+  "w32zhong/snowy-microwave__PonderEagle_ttt10_ep5_tau5_layer2_datacombined_C1.86_22.94_tf32False" \
   ; do
 
   for tree in \
-     6,10,50   6,10,60   6,10,70   6,10,80   6,10,90   6,10,100 \
-     7,10,50   7,10,60   7,10,70   7,10,80   7,10,90   7,10,100 \
-     8,10,50   8,10,60   8,10,70   8,10,80   8,10,90   8,10,100 \
-     9,10,50   9,10,60   9,10,70   9,10,80   9,10,90   9,10,100 \
-    10,10,50  10,10,60  10,10,70  10,10,80  10,10,90  10,10,100 \
-    11,10,50  11,10,60  11,10,70  11,10,80  11,10,90  11,10,100 \
-    12,10,50  12,10,60  12,10,70  12,10,80  12,10,90  12,10,100 \
+    12,1,14 \
+    12,10,80 \
     ; do
 
-    IFS=',' read -r model train_ttt <<< $model_and_train_ttt
-    IFS=',' read -r depth top_k total_k <<< $tree
-
-    #options="stats_verbose_0_avg stats_verbose_0_max stats_verbose_0_min stats_cost_0"
-    options="disabled0 greedy0_avg"
+    #options="stats_cost_1ML_avg"
+    options="disabled_ML greedy_1ML_avg stats_verbose_1ML_avg"
 
     for pondering_options in $options; do
-      for pondering_threshold in 0.8 0.9 0.95 0.99 1.0; do
+      for pondering_threshold in 0.99; do
 
         if [[ "$pondering_options" =~ "disabled" ]]; then
           session=$(experiment_sanitize "${model}_${tree}_baseline_${pondering_options}")
@@ -61,9 +57,12 @@ for model_and_train_ttt in \
           echo "session exists: exp_$session"; continue
         fi
 
-        # allocate devices and run a new experiment
+        # allocate devices
         devices=$(experiment_alloc_devices $cnt $GPU0 $GPUS $TP_SIZE)
         let 'cnt+=1'
+
+        # run a new experiment
+        IFS=',' read -r depth top_k total_k <<< $tree
         run $devices $session \
           --base-model-path meta-llama/Meta-Llama-3.1-8B-Instruct \
           --ea-model-path $model \
