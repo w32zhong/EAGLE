@@ -21,6 +21,11 @@ run() {
 }
 
 for model in \
+  "w32zhong/wandering-energy__PonderEagle_ttt10_ep5_tau5_layer1_datacombined_C1.22_23.17_tf32False" \
+  "w32zhong/glowing-jazz__PonderEagle_ttt10_ep5_tau5_layer1_datacombined_C1.40_22.90_tf32False" \
+  "w32zhong/golden-valley__PonderEagle_ttt10_ep5_tau5_layer1_datacombined_C1.40_22.90_tf32True" \
+  "w32zhong/azure-wood__PonderEagle_ttt12_ep5_tau5_layer1_datacombined_C1.40_22.90_tf32False" \
+  "w32zhong/snowy-microwave__PonderEagle_ttt10_ep5_tau5_layer2_datacombined_C1.86_22.94_tf32False" \
   "w32zhong/resilient-paper__annealing100_ep5_step_1465K" \
   ; do
 
@@ -32,10 +37,18 @@ for model in \
 
     #options="stats_cost_1ML_avg"
 
-    if [ $depth -eq 6 ]; then
-      options="disabled"
+    if [[ "$model" =~ "resilient-paper" ]]; then
+      if [ $depth -eq 6 ]; then
+        options="disabled"
+      else
+        options="greedy0_avg"
+      fi
     else
-      options="disabled greedy0_avg"
+      if [ $depth -eq 6 ]; then
+        options="disabled_ML"
+      else
+        options="greedy_1ML_avg greedy_0ML_avg"
+      fi
     fi
 
     for pondering_options in $options; do
