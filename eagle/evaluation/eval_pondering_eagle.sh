@@ -6,7 +6,6 @@ QUESTION_END=$(experiment_argparse --end "" $@)
 SESSION_END=$(experiment_argparse --session-end "exit" $@)
 
 mkdir -p ./mt_bench
-rm -f gpu_*.lock
 cnt=0
 
 run() {
@@ -22,28 +21,25 @@ run() {
 }
 
 for model in \
-  "w32zhong/wandering-energy__PonderEagle_ttt10_ep5_tau5_layer1_datacombined_C1.22_23.17_tf32False" \
-  "w32zhong/glowing-jazz__PonderEagle_ttt10_ep5_tau5_layer1_datacombined_C1.40_22.90_tf32False" \
-  "w32zhong/golden-valley__PonderEagle_ttt10_ep5_tau5_layer1_datacombined_C1.40_22.90_tf32True" \
-  "w32zhong/azure-wood__PonderEagle_ttt12_ep5_tau5_layer1_datacombined_C1.40_22.90_tf32False" \
-  "w32zhong/snowy-microwave__PonderEagle_ttt10_ep5_tau5_layer2_datacombined_C1.86_22.94_tf32False" \
+  "w32zhong/resilient-paper__annealing100_ep5_step_1465K" \
   ; do
 
   for tree in \
     6,10,70 6,10,80 \
-    12,1,14 12,10,80 \
+    12,10,90 12,10,80 \
     ; do
     IFS=',' read -r depth top_k total_k <<< $tree
 
     #options="stats_cost_1ML_avg"
+
     if [ $depth -eq 6 ]; then
-      options="disabled_ML"
+      options="disabled"
     else
-      options="disabled_ML greedy_1ML_avg stats_verbose_1ML_avg"
+      options="disabled greedy0_avg"
     fi
 
     for pondering_options in $options; do
-      for pondering_threshold in 0.99; do
+      for pondering_threshold in 0.99 1.0; do
 
         if [[ "$pondering_options" =~ "disabled" ]]; then
           session=$(experiment_sanitize "${model}_${tree}_baseline_${pondering_options}")
