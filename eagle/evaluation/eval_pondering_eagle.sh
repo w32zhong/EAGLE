@@ -30,12 +30,17 @@ for model in \
   ; do
 
   for tree in \
-    12,1,14 \
-    12,10,80 \
+    6,10,70 6,10,80 \
+    12,1,14 12,10,80 \
     ; do
+    IFS=',' read -r depth top_k total_k <<< $tree
 
     #options="stats_cost_1ML_avg"
-    options="disabled_ML greedy_1ML_avg stats_verbose_1ML_avg"
+    if [ $depth -eq 6 ]; then
+      options="disabled_ML"
+    else
+      options="disabled_ML greedy_1ML_avg stats_verbose_1ML_avg"
+    fi
 
     for pondering_options in $options; do
       for pondering_threshold in 0.99; do
@@ -62,7 +67,6 @@ for model in \
         let 'cnt+=1'
 
         # run a new experiment
-        IFS=',' read -r depth top_k total_k <<< $tree
         run $devices $session \
           --base-model-path meta-llama/Meta-Llama-3.1-8B-Instruct \
           --ea-model-path $model \
